@@ -6,12 +6,24 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:ingest": "node scripts/ingest-supabase.mjs"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
+    "@supabase/supabase-js": "^2.103.0",
+    "@types/papaparse": "^5.5.2",
+    "@types/three": "^0.183.1",
+    "csv-parse": "^6.2.1",
+    "groq-sdk": "^1.1.2",
+    "lucide-react": "^1.8.0",
     "next": "16.2.3",
+    "papaparse": "^5.5.3",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "recharts": "^3.8.1",
+    "three": "^0.183.2"
   },
   "devDependencies": {
     "@types/node": "^20",

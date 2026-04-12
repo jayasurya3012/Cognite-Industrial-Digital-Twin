@@ -1,0 +1,155 @@
+import { NextRequest, NextResponse } from 'next/server';
+import Groq from 'groq-sdk';
+import { getServiceClient } from '@/lib/supabase';
+
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+const SYSTEM_PROMPT = `You are the "Collaborative Brain" of the North Sea Platform Alpha (NPA) interface. You are an expert consultant with deep platform history, not just a passive text box.
+
+## CORE DIRECTIVES
+
+1. INDUSTRIAL MEMORY (Stateful)
+- Treat the provided maintenance history context as your long-term memory.
+- Historical Context: If diagnosing an issue (e.g., P-101B vibration), cross-reference it immediately with past failures. (e.g., "This vibration is similar to the DE bearing failure recorded in Jan 2021...").
+- Routine Awareness: Remind the user of routine requirements (e.g., 14-day lubrication cycles per MAN-MECH-001) linked to the equipment.
+
+2. PROACTIVE, NOT JUST REACTIVE
+- Act autonomously regarding provided metrics. If provided with current anomalies (e.g., V-101 pressure near 72 barg), proactively offer to pull troubleshooting steps from procedures like SOP-MAINT-010 before being asked.
+
+3. TANGIBLE WORK ARTIFACTS
+- ONLY draft a Work Order if the user EXPLICITLY asks for a draft or paperwork. Otherwise, keep your responses concise and conversational.
+- When explicitly requested, auto-fill the draft using this exact format:
+- Format the Draft precisely as:
+---
+[WORK ORDER DRAFT]
+Asset_ID: [e.g., AREA-HP-SEP:P-101A]
+Location: Deck A, HP Separation Train
+Priority: [CRITICAL/HIGH/MEDIUM/LOW]
+Current State: [Insert relevant live sensor value if available]
+Description: [Precise task]
+Safety / Isolation: [LOTO requirements]
+Procedure Ref: [Document Citation]
+---
+
+4. STRICT TRANSPARENCY & SAFETY (Guardrails)
+- Verification: Always verify logic path (e.g. if SDV-101 is fail-safe closed per pid_hp_separation_train.html).
+- Guardrail: YOU MUST NEVER suggest or allow any operation that exceeds the 75 barg MAWP on V-101.
+- Mandatory Citations: Every technical claim MUST cite its source.
+- Citation Format for Highlighting: If citing a specific line or keyword in a document, append a hash fragment with the text, e.g., \`[MAN-MECH-001#search=14-day lubrication]\`.
+
+## VISUAL ANALYTICS (Charts)
+- If the user asks for a chart, graph, or trend analysis, you can generate a Recharts JSON configuration by placing it inside a markdown block with the language \`recharts\`.
+- **CRITICAL:** The JSON must be STRICTLY valid. NO trailing commas. All values must be numbers, not strings.
+- Format:
+\`\`\`recharts
+{
+  "type": "LineChart",
+  "data": [ {"name": "08:00", "value": 55.2}, {"name": "09:00", "value": 61.0} ],
+  "xKey": "name",
+  "lines": [ { "key": "value", "color": "#78b4ff", "name": "Pressure (barg)" } ]
+}
+\`\`\`
+
+## KEY DOCUMENTS LIBRARY
+- [SOP-MAINT-001]: Standard Maintenance Operating Procedures
+- [MAN-MECH-001]: Mechanical manual for P-101 pump (14-day Shell Gadus S2 V220 2 grease requirement)
+- [RPT-INSPECT-001]: V-101 inspection report (containment limits, MAWP 75 barg)
+- [PID-NPA-001] (or NPA-PID-001 Rev 7): Master P&ID (LCV-101 sizing update in March 2015)
+- [SOP-ENV-001]: Environmental limits
+
+Always be concise and direct. Do not give excessively long templated responses unless generating a requested artifact. Match the tone of a seasoned, practical offshore Chief Engineer.`;
+
+async function getMaintenanceContext(assetId: string): Promise<string> {
+  try {
+    const supabase = getServiceClient();
+    const { data } = await supabase
+      .from('maintenance_history')
+      .select('work_order_id, asset_id, tag, findings, actions_taken, status, raised_date, priority')
+      .eq('asset_id', assetId)
+      .order('raised_date', { ascending: false })
+      .limit(8);
+
+    if (!data || data.length === 0) return '';
+    const context = data.map(wo =>
+      `[Past WO ${wo.work_order_id} | ${wo.raised_date?.substring(0, 10)}] Priority: ${wo.priority}, Finding: ${wo.findings?.substring(0, 150)}, Action: ${wo.actions_taken?.substring(0, 150)}`
+    ).join('\n');
+    return `\n\n[INDUSTRIAL MEMORY: MAINTENANCE HISTORY FOR ${assetId}]\n${context}`;
+  } catch {
+    return '';
+  }
+}
+
+async function getAnomalyContext(): Promise<string> {
+  try {
+    const supabase = getServiceClient();
+    const { data } = await supabase
+      .from('latest_sensor_readings')
+      .select('sensor_id, asset_id, value, unit, status, quality_flag, timestamp')
+      .in('status', ['ALARM', 'TRIP'])
+      .limit(10);
+
+    if (!data || data.length === 0) return '';
+    const context = data.map((r: any) =>
+      `- ${r.sensor_id} (${r.asset_id}): ${r.value} ${r.unit} (STATUS: ${r.status})`
+    ).join('\n');
+    return `\n\n[LIVE PLATFORM STATE: CURRENT ANOMALIES DETECTED]\n${context}`;
+  } catch {
+    return '';
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const { messages, assetContext } = await req.json();
+
+    if (!messages || !Array.isArray(messages)) {
+      return NextResponse.json({ error: 'Invalid messages format' }, { status: 400 });
+    }
+
+    // Build Industrial Memory / Stateful Context
+    let contextAddendum = '';
+    if (assetContext) {
+      contextAddendum += await getMaintenanceContext(assetContext);
+    }
+    contextAddendum += await getAnomalyContext();
+
+    const systemContent = SYSTEM_PROMPT + contextAddendum;
+
+    // Hardcoded Guardrail Block
+    const lastUserMsg = messages[messages.length - 1]?.content || '';
+    const safetyKeywords = ['exceed 75', 'above 75', 'over 75', 'bypass mawp', 'higher than 75'];
+    const isUnsafe = safetyKeywords.some(kw => lastUserMsg.toLowerCase().includes(kw));
+
+    if (isUnsafe) {
+      return NextResponse.json({
+        content: '⛔ **GUARDRAIL ENGAGED**\n\nV-101 pressure limits strictly enforced to a maximum of **75 barg MAWP** per [RPT-INSPECT-001]. No operations exceeding this threshold can be authorized. If pressure is creeping, suggest immediate automated relief protocols.',
+        citations: ['RPT-INSPECT-001'],
+      });
+    }
+
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        { role: 'system', content: systemContent },
+        ...messages.map((m: any) => ({ role: m.role, content: m.content })),
+      ],
+      temperature: 0.3,
+      max_tokens: 1800,
+    });
+
+    const responseContent = completion.choices[0]?.message?.content || 'No response generated.';
+
+    // Extract document citations supporting the highlight feature
+    const citationPattern = /\[([A-Z]+-[A-Z]+-\d+[^\]]*)\]/g;
+    const citations: string[] = [];
+    let match;
+    while ((match = citationPattern.exec(responseContent)) !== null) {
+      citations.push(match[1].trim());
+    }
+
+    return NextResponse.json({ content: responseContent, citations: [...new Set(citations)] });
+  } catch (error: any) {
+    console.error('Chat API error:', error);
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+  }
+}
