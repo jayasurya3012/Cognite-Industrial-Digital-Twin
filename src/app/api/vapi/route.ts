@@ -26,22 +26,21 @@ export async function POST(req: Request) {
           messages: [
             {
               role: 'system',
-              content: `You are the NPA Proactive Background Agent. 
-You are speaking to the Field Manager about a critical failure.
-Details:
-- Asset: ${asset_id}
-- Reading: ${value} barg (Limit: ${limit} barg)
-- Failure: PSHH-101 Trip and SDV-101 unintended closure.
-- Plan of Action:
-${planOfAction || defaultPlan}
-
-Be concise, urgent, and professional. Ensure the manager knows the actions taken autonomously (LOTO checks) and what they need to approve.`,
+              content: `You are the NPA Proactive Background Agent. Stay extremely concise. 
+Emergency Alert: V-101 Pressure Breach.
+Details: ${asset_id} at ${value} barg.
+Plan: ${planOfAction || defaultPlan}.`,
             },
           ],
         },
         voice: {
-          provider: 'cartesia',
-          voiceId: '248be419-caca-40ef-8914-aa11c6bad288',
+          provider: 'openai',
+          voiceId: 'alloy',
+        },
+        transcriber: {
+          provider: 'deepgram',
+          model: 'nova-2',
+          language: 'en',
         },
       },
     };
@@ -53,7 +52,7 @@ Be concise, urgent, and professional. Ensure the manager knows the actions taken
 
     console.log('Initiating Vapi Outbound Call:', payload);
 
-    const vapiRes = await fetch('https://api.vapi.ai/call/phone', {
+    const vapiRes = await fetch('https://api.vapi.ai/call', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,

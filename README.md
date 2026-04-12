@@ -22,6 +22,10 @@ The digital twin environment allows operators to inspect asset health within the
 Real-time simulation showing the system's response to an overpressure event (PSHH-101 Trip) and subsequent autonomous field manager outcall.
 ![3D Critical Fault Event](public/gitimg/3dcritical.png)
 
+### Intelligent AI Operations Hub
+A context-aware industrial assistant with persistent memory, real-time telemetry cross-referencing, and automated work order generation.
+![AI Hub Interface](public/gitimg/chatwindow.png)
+
 ## Core Technical Features
 
 ### Physics-Informed 3D Visualization

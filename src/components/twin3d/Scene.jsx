@@ -419,6 +419,19 @@ export default function SceneCanvas({ focusedAsset, onSelectAsset }) {
             planOfAction: `1. Verify SDV-101 full closure.\n2. Flare system check (PSV-101).\n3. Standby pump P-101B start verified.\n4. Isolate HP Train for inspection.`
           })
         }).catch(err => console.error('Simulation Vapi trigger failed:', err));
+
+        // ── New: Email Notification ──
+        fetch('/api/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            asset_id: 'AREA-HP-SEP:V-101',
+            value: currentPressure,
+            limit: 72,
+            status: phase.toUpperCase(),
+            timestamp: new Date().toISOString()
+          })
+        }).catch(err => console.error('Simulation Email trigger failed:', err));
       }
     }
   }, [phase, simRunning, activeSimData]);

@@ -180,6 +180,19 @@ export function useLiveTelemetry() {
             planOfAction: `1. Confirm SDV-101 trip closure.\n2. Manual check of PSV-101 reseat.\n3. Inspection of P-101A bearing vibration trend.`
           })
         }).then(res => res.json()).catch(err => console.error("Vapi Call failed:", err));
+        
+        // Trigger Email Notification
+        fetch('/api/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            asset_id: 'AREA-HP-SEP:V-101',
+            value: pt101a.value,
+            limit: 72,
+            status: 'TRIP',
+            timestamp: new Date().toISOString()
+          })
+        }).catch(err => console.error("Email notification failed:", err));
       }
     }
   }, [readings]);
