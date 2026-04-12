@@ -12,15 +12,15 @@ The application satisfies three primary tracks of operational excellence:
 
 ### Operational Command Dashboard
 The primary interface provides high-level KPIs, production targets, and direct links to safety documentation.
-![NPA Dashboard](/gitimg/dashboard.png)
+![NPA Dashboard](public/gitimg/dashboard.png)
 
 ### 3D Spatial Context
 The digital twin environment allows operators to inspect asset health within their physical spatial configuration.
-![3D Digital Twin Layout](/gitimg/3dlayout.png)
+![3D Digital Twin Layout](public/gitimg/3dlayout.png)
 
 ### Autonomous Fault Detection
 Real-time simulation showing the system's response to an overpressure event (PSHH-101 Trip) and subsequent autonomous field manager outcall.
-![3D Critical Fault Event](/gitimg/3dcritical.png)
+![3D Critical Fault Event](public/gitimg/3dcritical.png)
 
 ## Core Technical Features
 
