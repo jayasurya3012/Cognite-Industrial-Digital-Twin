@@ -117,6 +117,7 @@ export default function TwinContextAssistant({ selectedAsset, onSelectAsset }: T
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
   const [messages, setMessages] = useState<TwinChatMessage[]>([
     {
       role: 'assistant',
@@ -132,6 +133,7 @@ export default function TwinContextAssistant({ selectedAsset, onSelectAsset }: T
   const quickAssets = ASSET_TAGS.filter((asset, index, all) =>
     all.findIndex(item => item.sceneId === asset.sceneId) === index
   );
+  const mentionMatches = ASSET_TAGS.filter(asset => asset.tag.toLowerCase().includes(mentionQuery.toLowerCase()));
 
   const focusAsset = (sceneId: string) => {
     onSelectAsset(sceneId);
@@ -150,6 +152,30 @@ export default function TwinContextAssistant({ selectedAsset, onSelectAsset }: T
 
   const resetView = () => {
     onSelectAsset(null);
+  };
+
+  const insertMention = (tag: string) => {
+    setInput(prev => prev.replace(/@([a-zA-Z0-9-]*)$/, `@${tag} `));
+    setMentionQuery('');
+  };
+
+  const detectSceneFromText = (text: string) => {
+    const match = detectAssetTag(text);
+    return match?.sceneId || null;
+  };
+
+  const handleInput = (val: string) => {
+    setInput(val);
+    const cursor = val.lastIndexOf('@');
+    if (cursor !== -1) {
+      const query = val.slice(cursor + 1);
+      // Only show suggestions if '@' is at start or after a space
+      if (cursor === 0 || val[cursor - 1] === ' ') {
+        setMentionQuery(query);
+        return;
+      }
+    }
+    setMentionQuery('');
   };
 
   const send = async (text: string) => {
@@ -182,6 +208,11 @@ export default function TwinContextAssistant({ selectedAsset, onSelectAsset }: T
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || `API error: ${res.status}`);
+      }
+
+      const responseSceneId = detectSceneFromText(data.content || '') || assetTag?.sceneId || null;
+      if (responseSceneId) {
+        onSelectAsset(responseSceneId);
       }
 
       setMessages(prev => [...prev, {
@@ -247,27 +278,30 @@ export default function TwinContextAssistant({ selectedAsset, onSelectAsset }: T
           style={{
             position: 'absolute',
             top: 18,
-            right: open ? 392 : 18,
+            right: open ? 340 : 18,
             zIndex: 25,
-            width: 280,
-            background: 'rgba(8,13,22,0.92)',
-            border: '1px solid rgba(120,180,255,0.28)',
-            borderRadius: 14,
-            padding: 14,
-            boxShadow: '0 10px 30px rgba(0,0,0,0.32)',
-            backdropFilter: 'blur(14px)',
+            width: 240,
+            background: 'rgba(8,13,22,0.94)',
+            border: '1px solid rgba(120,180,255,0.2)',
+            borderRadius: 12,
+            padding: 10,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            backdropFilter: 'blur(10px)',
+            transition: 'right 0.3s ease',
           }}
         >
-          <div style={{ fontSize: '0.68rem', color: 'var(--blue)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Focused Asset
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <div style={{ fontSize: '0.6rem', color: '#60a5fa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Focused Asset
+              </div>
+              <div style={{ fontSize: '0.8rem', color: '#fff', fontWeight: 700, marginTop: 2 }}>
+                {selectedAssetData.name}
+              </div>
+            </div>
+            <button onClick={resetView} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 14 }}>×</button>
           </div>
-          <div style={{ fontSize: '0.88rem', color: 'var(--t1)', fontWeight: 700, marginTop: 6 }}>
-            {selectedAssetData.name}
-          </div>
-          <div style={{ fontSize: '0.62rem', color: 'var(--t3)', marginTop: 2 }}>
-            {selectedAssetData.asset_id}
-          </div>
-          <div style={{ display: 'grid', gap: 6, marginTop: 12 }}>
+          <div style={{ display: 'grid', gap: 4, marginTop: 10 }}>
             {selectedAssetData.sensors.map(sensor => (
               <div
                 key={sensor.sensor_id}
@@ -275,14 +309,14 @@ export default function TwinContextAssistant({ selectedAsset, onSelectAsset }: T
                   display: 'flex',
                   justifyContent: 'space-between',
                   gap: 8,
-                  fontSize: '0.68rem',
-                  padding: '6px 8px',
-                  borderRadius: 8,
-                  background: 'rgba(255,255,255,0.03)',
+                  fontSize: '0.64rem',
+                  padding: '4px 6px',
+                  borderRadius: 6,
+                  background: 'rgba(255,255,255,0.02)',
                 }}
               >
-                <span style={{ color: 'var(--t2)', fontFamily: 'JetBrains Mono, monospace' }}>{sensor.sensor_id}</span>
-                <span style={{ color: 'var(--t1)', fontWeight: 600 }}>{formatReading(sensor.value, sensor.unit)}</span>
+                <span style={{ color: '#94a3b8', fontFamily: 'JetBrains Mono, monospace' }}>{sensor.sensor_id}</span>
+                <span style={{ color: (sensor.status === 'GOOD' ? '#fff' : '#fbbf24'), fontWeight: 600 }}>{formatReading(sensor.value, sensor.unit)}</span>
               </div>
             ))}
           </div>
@@ -295,61 +329,109 @@ export default function TwinContextAssistant({ selectedAsset, onSelectAsset }: T
             position: 'absolute',
             top: 18,
             right: 18,
-            bottom: 72,
-            width: 356,
+            bottom: 84,
+            width: 310,
             zIndex: 28,
             display: 'flex',
             flexDirection: 'column',
-            background: 'rgba(7,12,20,0.96)',
-            border: '1px solid rgba(120,180,255,0.28)',
-            borderRadius: 18,
-            boxShadow: '0 16px 40px rgba(0,0,0,0.45)',
-            backdropFilter: 'blur(18px)',
+            background: 'rgba(6, 11, 19, 0.98)',
+            border: '1px solid rgba(59, 130, 246, 0.3)',
+            borderRadius: 16,
+            boxShadow: '0 12px 48px rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(20px)',
             overflow: 'hidden',
           }}
         >
-          <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-            <div style={{ fontSize: '0.82rem', color: 'var(--t1)', fontWeight: 700 }}>3D Context Chat</div>
-            <div style={{ fontSize: '0.62rem', color: 'var(--t3)', marginTop: 3 }}>
-              Tag assets to focus the twin and pull contextual answers.
+          <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: '0.78rem', color: '#fff', fontWeight: 700 }}>Twin Intelligence Hub</div>
+              <div style={{ fontSize: '0.58rem', color: '#64748b', marginTop: 1 }}>Real-time contextual dialogue</div>
             </div>
+            <button onClick={() => setOpen(false)} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 16 }}>×</button>
           </div>
 
-          <div style={{ display: 'flex', gap: 6, padding: '10px 12px 0', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 5, padding: '10px 12px 6px', flexWrap: 'wrap' }}>
             {quickAssets.map(asset => (
               <button
                 key={`${asset.sceneId}-${asset.tag}`}
                 onClick={() => focusAsset(asset.sceneId)}
                 style={{
-                  border: '1px solid rgba(120,180,255,0.22)',
-                  background: 'rgba(120,180,255,0.08)',
-                  color: 'var(--blue)',
-                  borderRadius: 999,
-                  padding: '5px 10px',
+                  border: '1px solid rgba(120,180,255,0.18)',
+                  background: 'rgba(120,180,255,0.06)',
+                  color: '#93c5fd',
+                  borderRadius: 6,
+                  padding: '3px 8px',
                   cursor: 'pointer',
                   fontSize: '0.62rem',
-                  fontWeight: 700,
+                  fontWeight: 600,
+                  transition: 'all 0.2s ease',
                 }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(120,180,255,0.12)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(120,180,255,0.06)'}
               >
                 @{asset.tag}
               </button>
             ))}
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {mentionQuery && mentionMatches.length > 0 && (
+            <div style={{ position: 'absolute', bottom: 110, left: 12, right: 12, zIndex: 40 }}>
+              <div style={{
+                background: 'rgba(13,20,33,0.98)',
+                border: '1px solid rgba(59,130,246,0.5)',
+                borderRadius: 10,
+                overflow: 'hidden',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.6)'
+              }}>
+                <div style={{ padding: '6px 10px', fontSize: '0.58rem', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.05)', fontWeight: 600, textTransform: 'uppercase' }}>
+                  Asset Suggestions
+                </div>
+                {mentionMatches.slice(0, 5).map(asset => (
+                  <button
+                    key={`mention-${asset.tag}`}
+                    onClick={() => insertMention(asset.tag)}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '7px 10px',
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#e5eefb',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      borderBottom: '1px solid rgba(255,255,255,0.03)',
+                      fontSize: '0.68rem',
+                      transition: 'background 0.1s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(59,130,246,0.15)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <span style={{ fontWeight: 700, color: '#60a5fa' }}>@{asset.tag}</span>
+                    <span style={{ color: '#94a3b8', fontSize: '0.62rem' }}>{asset.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
             {messages.map((message, index) => (
               <div
                 key={`${message.role}-${index}`}
                 style={{
                   alignSelf: message.role === 'user' ? 'flex-end' : 'flex-start',
-                  maxWidth: '88%',
-                  padding: '10px 12px',
-                  borderRadius: 14,
-                  background: message.role === 'user' ? 'linear-gradient(135deg, #1d4ed8, #2563eb)' : 'rgba(255,255,255,0.05)',
-                  color: '#f8fafc',
+                  maxWidth: '92%',
+                  padding: '8px 10px',
+                  borderRadius: message.role === 'user' ? '12px 12px 0 12px' : '12px 12px 12px 0',
+                  background: message.role === 'user' ? 'linear-gradient(135deg, #2563eb, #1e4ed8)' : 'rgba(255,255,255,0.04)',
+                  color: message.role === 'user' ? '#fff' : '#e2e8f0',
                   whiteSpace: 'pre-wrap',
-                  fontSize: '0.76rem',
-                  lineHeight: 1.55,
+                  fontSize: '0.72rem',
+                  lineHeight: 1.45,
+                  boxShadow: message.role === 'user' ? '0 4px 12px rgba(37,99,235,0.2)' : 'none',
+                  border: message.role === 'assistant' ? '1px solid rgba(255,255,255,0.03)' : 'none'
                 }}
               >
                 {renderInlineMessage(message.content, `${message.role}-${index}`)}
@@ -363,8 +445,17 @@ export default function TwinContextAssistant({ selectedAsset, onSelectAsset }: T
           <div style={{ padding: 12, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
             <textarea
               value={input}
-              onChange={event => setInput(event.target.value)}
+              onChange={event => handleInput(event.target.value)}
               onKeyDown={event => {
+                if (mentionQuery && mentionMatches.length > 0 && event.key === 'Enter') {
+                  event.preventDefault();
+                  insertMention(mentionMatches[0].tag);
+                  return;
+                }
+                if (event.key === 'Escape') {
+                  setMentionQuery('');
+                  return;
+                }
                 if (event.key === 'Enter' && !event.shiftKey) {
                   event.preventDefault();
                   send(input);

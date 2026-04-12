@@ -12,7 +12,7 @@ import { sensors as plantSensors } from '@/data/plantData';
  * AssetFactory — routes each asset/valve to its specialized 3D component.
  * Manages selection/hover state and renders associated sensors + labels.
  */
-export default function AssetFactory({ asset, isValve = false, healthMap, rawReadings, sensorValues, isFocused, onFocus }) {
+export default function AssetFactory({ asset, isValve = false, healthMap, rawReadings, sensorValues, isFocused, onFocus, onSelect }) {
   const [isHovered, setIsHovered] = useState(false);
   const [isSelected, setIsSelected] = useState(false);
   const focusRingRef = useRef(null);
@@ -47,6 +47,7 @@ export default function AssetFactory({ asset, isValve = false, healthMap, rawRea
 
   const handleClick = (e) => {
     e.stopPropagation();
+    if (onSelect) onSelect();
     setIsSelected((prev) => !prev);
   };
 
@@ -147,6 +148,7 @@ export default function AssetFactory({ asset, isValve = false, healthMap, rawRea
         id={id}
         name={asset.name}
         isSelected={isSelected}
+        isHovered={isHovered}
         sensorValues={sensorValues}
         assetSensors={assetSensors}
       />

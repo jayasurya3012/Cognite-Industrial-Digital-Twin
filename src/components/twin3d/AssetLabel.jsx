@@ -10,6 +10,7 @@ export default function AssetLabel({
   id,
   name,
   isSelected,
+  isHovered,
   sensorValues,
   assetSensors = [],
 }) {
@@ -21,6 +22,7 @@ export default function AssetLabel({
   const config = primarySensor
     ? sensorTypeConfig[primarySensor.type]
     : null;
+  const expanded = isSelected || isHovered;
 
   return (
     <Html
@@ -46,9 +48,11 @@ export default function AssetLabel({
           style={{
             background: isSelected
               ? 'rgba(0, 212, 255, 0.2)'
+              : isHovered
+              ? 'rgba(59, 130, 246, 0.16)'
               : 'rgba(10, 14, 23, 0.8)',
             backdropFilter: 'blur(12px)',
-            border: `1px solid ${isSelected ? 'rgba(0, 212, 255, 0.6)' : 'rgba(255,255,255,0.08)'}`,
+            border: `1px solid ${isSelected ? 'rgba(0, 212, 255, 0.6)' : isHovered ? 'rgba(96, 165, 250, 0.45)' : 'rgba(255,255,255,0.08)'}`,
             borderRadius: '8px',
             padding: '6px 12px',
             whiteSpace: 'nowrap',
@@ -57,8 +61,10 @@ export default function AssetLabel({
             gap: '8px',
             boxShadow: isSelected
               ? '0 0 20px rgba(0, 212, 255, 0.3)'
+              : isHovered
+              ? '0 0 16px rgba(59,130,246,0.22)'
               : '0 4px 12px rgba(0,0,0,0.4)',
-            transform: isSelected ? 'scale(1.05)' : 'scale(1)',
+            transform: expanded ? 'scale(1.05)' : 'scale(1)',
             transition: 'all 0.3s ease',
           }}
         >
@@ -74,7 +80,7 @@ export default function AssetLabel({
             {id}
           </span>
 
-          {primaryReading && !isSelected && (
+          {primaryReading && !expanded && (
             <>
               <span
                 style={{
@@ -97,7 +103,7 @@ export default function AssetLabel({
           )}
         </div>
 
-        {isSelected && (
+        {expanded && (
           <div
             style={{
               background: 'rgba(10, 14, 23, 0.95)',

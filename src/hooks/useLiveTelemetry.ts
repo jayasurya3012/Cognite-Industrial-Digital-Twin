@@ -13,7 +13,7 @@ import { supabase } from '@/lib/supabase';
 import type { LiveSensorReading, AssetHealth, ProactiveAlert, SensorMetadata } from '@/lib/types';
 
 // V-101 pressure alarm threshold per instructions.md (Track 2)
-const V101_PRESSURE_SENSOR = 'V-101-PRESS';
+const V101_PRESSURE_SENSOR = 'PT101A';
 const V101_MAWP = 75; // barg — absolute safety limit
 const V101_TRIP_WARN = 72; // barg — proactive compliance guardrail
 
@@ -146,7 +146,7 @@ export function useLiveTelemetry() {
 
   useEffect(() => {
     fetchTelemetry();
-    pollRef.current = setInterval(fetchTelemetry, 30000); // Poll every 30s
+    pollRef.current = setInterval(fetchTelemetry, 5000); // Poll every 5s for demo responsiveness
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [fetchTelemetry]);
 
@@ -190,12 +190,13 @@ function useMockData(
   const now = new Date().toISOString();
     // Simulate V-101 pressure at 73 barg (trigger point for VAPI outcall test!)
   const readings: LiveSensorReading[] = [
-    { sensor_id: 'PT-101A', asset_id: 'AREA-HP-SEP:V-101', value: 73.1, unit: 'bar', quality_flag: 'GOOD', status: 'TRIP', sensor_type: 'PRESSURE', timestamp: now },
+    { sensor_id: 'PT101A', asset_id: 'AREA-HP-SEP:V-101', value: 73.1, unit: 'bar', quality_flag: 'GOOD', status: 'TRIP', sensor_type: 'PRESSURE', timestamp: now },
     { sensor_id: 'V-101-LEVEL', asset_id: 'AREA-HP-SEP:V-101', value: 52.3, unit: '%', quality_flag: 'GOOD', status: 'GOOD', sensor_type: 'LEVEL', timestamp: now },
     { sensor_id: 'V-101-TEMP', asset_id: 'AREA-HP-SEP:V-101', value: 67.4, unit: 'degC', quality_flag: 'GOOD', status: 'GOOD', sensor_type: 'TEMPERATURE', timestamp: now },
     { sensor_id: 'V-101-GAS_FLOW', asset_id: 'AREA-HP-SEP:V-101', value: 9.2, unit: 'MMscfd', quality_flag: 'GOOD', status: 'GOOD', sensor_type: 'FLOW', timestamp: now },
     { sensor_id: 'V-101-OIL_FLOW', asset_id: 'AREA-HP-SEP:V-101', value: 118.5, unit: 'm3/h', quality_flag: 'GOOD', status: 'GOOD', sensor_type: 'FLOW', timestamp: now },
-    { sensor_id: 'P-101-VIB', asset_id: 'AREA-HP-SEP:P-101', value: 7.8, unit: 'mm/s', quality_flag: 'GOOD', status: 'ALARM', sensor_type: 'VIBRATION', timestamp: now },
+    { sensor_id: 'P-101A-VIB', asset_id: 'AREA-HP-SEP:P-101', value: 7.8, unit: 'mm/s', quality_flag: 'GOOD', status: 'ALARM', sensor_type: 'VIBRATION', timestamp: now },
+    { sensor_id: 'P-101B-VIB', asset_id: 'AREA-HP-SEP:P-101', value: 2.4, unit: 'mm/s', quality_flag: 'GOOD', status: 'GOOD', sensor_type: 'VIBRATION', timestamp: now },
     { sensor_id: 'V-102-PRESS', asset_id: 'AREA-HP-SEP:V-102', value: 42.1, unit: 'bar', quality_flag: 'GOOD', status: 'GOOD', sensor_type: 'PRESSURE', timestamp: now },
     { sensor_id: 'E-101-TEMP', asset_id: 'AREA-HP-SEP:E-101', value: 76.3, unit: 'degC', quality_flag: 'GOOD', status: 'GOOD', sensor_type: 'TEMPERATURE', timestamp: now },
   ];

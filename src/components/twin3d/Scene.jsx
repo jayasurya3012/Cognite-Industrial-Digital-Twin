@@ -83,19 +83,20 @@ function FaultToast({ phase, onClose }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <Html fullscreen style={{ pointerEvents: 'none' }}>
+    <>
       <div style={{
-        position: 'absolute', top: 72, right: 16,
-        width: expanded ? 360 : 280,
+        position: 'absolute', top: 84, right: 18,
+        zIndex: 50,
+        width: expanded ? 380 : 300,
         background: 'rgba(10, 14, 22, 0.97)',
-        backdropFilter: 'blur(12px)',
+        backdropFilter: 'blur(16px)',
         border: `1.5px solid ${borderColor}`,
-        borderRadius: 10,
-        boxShadow: `0 0 30px ${borderColor}44, 0 8px 24px rgba(0,0,0,0.7)`,
+        borderRadius: 12,
+        boxShadow: `0 0 40px ${borderColor}55, 0 12px 32px rgba(0,0,0,0.8)`,
         fontFamily: "'JetBrains Mono', monospace",
         overflow: 'hidden',
         pointerEvents: 'auto',
-        transition: 'width 0.25s ease',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       }}>
         {/* Header row */}
         <div style={{
@@ -186,9 +187,8 @@ function FaultToast({ phase, onClose }) {
         </div>
       </div>
 
-      {/* Keyframe for the pulse on the HUD button */}
       <style>{`@keyframes pulse-border { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.5)} 50%{box-shadow:0 0 0 6px rgba(239,68,68,0)} }`}</style>
-    </Html>
+    </>
   );
 }
 
@@ -206,17 +206,19 @@ function PhaseHUD({ label, phase, step, total, stepT, paused, simRunning, onStar
   const showAlertBtn = phase === 'trip' || phase === 'esd' || phase === 'alarm';
 
   return (
-    <Html fullscreen style={{ pointerEvents: 'none' }}>
+    <>
       <div style={{
-        position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
-        background: c.bg,
-        border: `1.5px solid ${c.border}`,
-        borderRadius: 10, padding: '8px 18px',
-        display: 'flex', alignItems: 'center', gap: 12,
-        boxShadow: `0 0 20px ${c.border}66, 0 4px 16px rgba(0,0,0,0.7)`,
+        position: 'absolute', top: 20, left: '50%', transform: 'translateX(-50%)',
+        zIndex: 9999, // Force to very top
+        background: 'rgba(10, 18, 30, 0.96)',
+        border: `1px solid ${c.border}`,
+        borderRadius: 12, padding: '12px 28px',
+        display: 'flex', alignItems: 'center', gap: 20,
+        boxShadow: `0 0 40px ${c.border}55, 0 10px 40px rgba(0,0,0,0.9)`,
         pointerEvents: 'auto',
         fontFamily: "'JetBrains Mono', monospace",
         whiteSpace: 'nowrap',
+        backdropFilter: 'blur(12px)',
       }}>
 
         {!simRunning ? (
@@ -321,8 +323,11 @@ function PhaseHUD({ label, phase, step, total, stepT, paused, simRunning, onStar
           </>
         )}
       </div>
-      <style>{`@keyframes pulse-border { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.5)} 50%{box-shadow:0 0 8px rgba(239,68,68,0.6)} }`}</style>
-    </Html>
+      <style>{`
+        @keyframes pulse-border { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.5)} 50%{box-shadow:0 0 8px rgba(239,68,68,0.6)} }
+        @keyframes slideUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+      `}</style>
+    </>
   );
 }
 
@@ -361,7 +366,7 @@ const STATIC_VALVE_STATES = {
 };
 
 // ── Main export ───────────────────────────────────────────────────────────────
-export default function SceneCanvas({ focusedAsset }) {
+export default function SceneCanvas({ focusedAsset, onSelectAsset }) {
   const {
     data: simData, phase, label,
     stepIndex, totalSteps, stepT,
@@ -495,39 +500,41 @@ export default function SceneCanvas({ focusedAsset }) {
   const bgColor = PHASE_BG[activePhase] || PHASE_BG.normal;
 
   return (
-    <Canvas
-      camera={{ position: [5, 18, 30], fov: 45, near: 0.1, far: 500 }}
-      shadows={{ type: THREE.PCFShadowMap }}
-      dpr={[1, 2]}
-      style={{ width: '100%', height: '100%' }}
-      gl={{ antialias: true, alpha: false }}
-    >
-      <color attach="background" args={[bgColor]} />
-      <fog attach="fog" args={[bgColor, 55, 130]} />
+    <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+      {/* ── Fixed Screen HUD ── */}
+      <PhaseHUD
+        label={label}
+        phase={activePhase}
+        step={stepIndex}
+        total={totalSteps}
+        stepT={stepT}
+        paused={paused}
+        simRunning={simRunning}
+        onStart={handleStart}
+        onTogglePause={togglePause}
+        onRestart={handleRestart}
+        onShowAlert={() => setShowAlert(true)}
+      />
 
-      <Suspense fallback={<Html center><div style={{ color: '#fff', fontFamily: 'monospace' }}>Loading 3D Twin...</div></Html>}>
-        {/* HUD */}
-        <PhaseHUD
-          label={label}
-          phase={activePhase}
-          step={stepIndex}
-          total={totalSteps}
-          stepT={stepT}
-          paused={paused}
-          simRunning={simRunning}
-          onStart={handleStart}
-          onTogglePause={togglePause}
-          onRestart={handleRestart}
-          onShowAlert={() => setShowAlert(true)}
+      {/* ── Compact corner toast (Screen Space) ── */}
+      {showAlert && simRunning && (
+        <FaultToast
+          phase={activePhase === 'esd' ? 'esd' : 'trip'}
+          onClose={() => setShowAlert(false)}
         />
+      )}
 
-        {/* Compact corner toast */}
-        {showAlert && simRunning && (
-          <FaultToast
-            phase={activePhase === 'esd' ? 'esd' : 'trip'}
-            onClose={() => setShowAlert(false)}
-          />
-        )}
+      <Canvas
+        camera={{ position: [5, 18, 30], fov: 45, near: 0.1, far: 500 }}
+        shadows={{ type: THREE.PCFShadowMap }}
+        dpr={[1, 2]}
+        style={{ width: '100%', height: '100%' }}
+        gl={{ antialias: true, alpha: false }}
+      >
+        <color attach="background" args={[bgColor]} />
+        <fog attach="fog" args={[bgColor, 55, 130]} />
+
+        <Suspense fallback={<Html center><div style={{ color: '#fff', fontFamily: 'monospace' }}>Loading 3D Twin...</div></Html>}>
 
         <Environment preset="city" />
 
@@ -568,6 +575,7 @@ export default function SceneCanvas({ focusedAsset }) {
             sensorValues={sensorValues}
             isFocused={focusedAsset === asset.id}
             onFocus={setCameraTarget}
+            onSelect={() => onSelectAsset?.(asset.id)}
           />
         ))}
 
@@ -582,6 +590,7 @@ export default function SceneCanvas({ focusedAsset }) {
             sensorValues={sensorValues}
             isFocused={focusedAsset === valve.id}
             onFocus={setCameraTarget}
+            onSelect={() => onSelectAsset?.(valve.id)}
           />
         ))}
 
@@ -605,5 +614,6 @@ export default function SceneCanvas({ focusedAsset }) {
         />
       </Suspense>
     </Canvas>
+  </div>
   );
 }
