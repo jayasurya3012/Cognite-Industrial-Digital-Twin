@@ -91,7 +91,7 @@ h3 { font-size: 0.9rem; font-weight: 600; }
 
 /* ── Sidebar ─────────────────────────────────────────────────── */
 .sidebar {
-  width: 220px;
+  width: 178px;
   flex-shrink: 0;
   background: rgba(0,0,0,0.6);
   border-right: 1px solid var(--border);
@@ -106,7 +106,7 @@ h3 { font-size: 0.9rem; font-weight: 600; }
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 20px 16px 18px;
+  padding: 18px 14px 16px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -120,11 +120,11 @@ h3 { font-size: 0.9rem; font-weight: 600; }
   box-shadow: 0 0 16px rgba(120,180,255,0.4);
 }
 
-.sidebar-nav { flex: 1; overflow-y: auto; padding: 10px 8px; }
+.sidebar-nav { flex: 1; overflow-y: auto; padding: 10px 6px; }
 
 .sidebar-item {
   display: flex; align-items: center; gap: 10px;
-  padding: 9px 12px;
+  padding: 8px 10px;
   border-radius: var(--r-md);
   margin-bottom: 2px;
   cursor: pointer;
@@ -146,7 +146,7 @@ h3 { font-size: 0.9rem; font-weight: 600; }
 .sidebar-item-sub { font-size: 0.65rem; color: var(--t3); margin-top: 1px; }
 
 .sidebar-footer {
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-top: 1px solid var(--border);
 }
 

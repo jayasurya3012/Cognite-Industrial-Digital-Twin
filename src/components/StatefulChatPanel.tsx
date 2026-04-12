@@ -42,6 +42,17 @@ function formatTime(d: Date) {
   return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
+function cleanAssistantText(content: string) {
+  return content
+    .replace(/\`\`\`recharts[\s\S]*?\`\`\`/g, '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/`(.*?)`/g, '$1')
+    .replace(/\[([A-Z]+-[A-Z]+-\d+(?:#[^\]\s]*)?)\]/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function CitationChip({ citation }: { citation: string }) {
   // Support appending #search=X to PDF bounds
   const parts = citation.split('#');
@@ -148,22 +159,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
     formattedContent = formattedContent.replace(match[0], '');
   }
 
-  const renderContent = (content: string) => {
-    if (isUser) return content;
-    return content
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/`(.*?)`/g, '<code style="background:rgba(120,180,255,0.1);padding:1px 6px;border-radius:4px;font-family:monospace;font-size:0.82em;color:var(--blue)">$1</code>')
-      .replace(/\[WORK ORDER DRAFT\]/g, '<span style="color:var(--alarm);font-weight:800">[WORK ORDER DRAFT]</span>')
-      .replace(/---\n?([\s\S]*?)\n?---/g, '<div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:6px;padding:12px 16px;margin:12px 0;font-family:monospace;font-size:0.8em;white-space:pre-wrap;color:var(--t2)">$1</div>')
-      .replace(/\[([A-Z]+-[a-zA-Z]+-\d+)(?:#[^\]\s]*)?\]/g, (match, p1) => {
-        const parts = match.slice(1, -1).split('#');
-        const docId = parts[0];
-        const hash = parts[1] ? '#' + parts[1] : '';
-        const href = DOC_LINKS[docId] ? `${DOC_LINKS[docId]}${hash}` : '#';
-        return `<a href="${href}" target="_blank" style="color:var(--blue);text-decoration:none;font-weight:700;background:rgba(120,180,255,0.1);padding:2px 6px;border-radius:4px" title="Open source document">📎 ${docId}</a>`;
-      })
-      .replace(/\n/g, '<br/>');
-  };
+  const plainTextContent = isUser ? formattedContent : cleanAssistantText(formattedContent);
 
   return (
     <div style={{ alignSelf: isUser ? 'flex-end' : 'flex-start', width: isUser ? 'auto' : '92%', maxWidth: '92%' }}>
@@ -176,7 +172,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
         className={`chat-bubble ${msg.role}`}
         style={{ width: '100%' }}
       >
-        <div dangerouslySetInnerHTML={{ __html: renderContent(formattedContent) }} />
+        <div>{plainTextContent}</div>
         {hasChart && <ChartRenderer jsonString={chartJson} />}
       </div>
       {msg.citations && msg.citations.length > 0 && (
@@ -206,7 +202,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
 export default function StatefulChatPanel({ fullPage }: { fullPage?: boolean }) {
   const [messages, setMessages] = useState<ChatMessage[]>([{
     role: 'assistant',
-    content: `**Welcome to NPA Field Operations AI**\n\nThe Collaborative Context Engine is online. I automatically cross-reference:\n• 3.07M sensor readings\n• Historical Maintenance Logs\n• Safety Guards (e.g. 75 barg V-101 limit)\n\nType **@** to tag a specific asset. How can I assist?`,
+    content: `Welcome to NPA Field Operations AI.\n\nI can cross-reference live sensor readings, maintenance history, and safety limits. Type @ to tag a specific asset.`,
     timestamp: new Date(),
     citations: [],
   }]);
@@ -259,26 +255,8 @@ export default function StatefulChatPanel({ fullPage }: { fullPage?: boolean }) 
     .catch(console.error);
   };
 
-  const loadMemoryHistory = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/memory');
-      const data = await res.json();
-      if (data.history && data.history.length > 0) {
-        const mems = data.history.map((h: any) => h.content || h.text || JSON.stringify(h)).slice(0,10).join('\n\n---\n');
-        setMessages(p => [...p, {
-          role: 'system',
-          content: `**[Supermemory Archives Retreived]**\n\n${mems}`,
-          timestamp: new Date()
-        }]);
-      } else {
-        setMessages(p => [...p, { role: 'system', content: 'No prior Supermemory history found yet.', timestamp: new Date() }]);
-      }
-    } catch (e: any) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
+  const openMemoryHistory = () => {
+    window.open('/chat/history', 'npa-chat-history', 'noopener,noreferrer');
   };
 
   const send = useCallback(async (text: string) => {
@@ -379,8 +357,8 @@ export default function StatefulChatPanel({ fullPage }: { fullPage?: boolean }) 
             </span>
           )}
           <button 
-             onClick={loadMemoryHistory}
-             title="Load Chat History from Supermemory"
+             onClick={openMemoryHistory}
+             title="Open Chat History in a separate window"
              style={{ fontSize: '0.6rem', color: 'var(--blue)', background: 'rgba(120,180,255,0.1)', border: '1px solid var(--border-blue)', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontWeight: 600 }}
           >
             Memory History
