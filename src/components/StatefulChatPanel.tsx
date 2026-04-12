@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import type { ChatMessage } from '@/lib/types';
 import { useLiveTelemetry } from '@/hooks/useLiveTelemetry';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
+import { generatePdfReport } from '@/lib/pdfGenerator';
 
 // Maps citation IDs to public PDF paths
 const DOC_LINKS: Record<string, string> = {
@@ -182,6 +183,15 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
           {msg.citations.map(c => <CitationChip key={c} citation={c} />)}
         </div>
       )}
+      {/* PDF Export logic for specific AI messages */}
+      {!isUser && (formattedContent.includes('[WORK ORDER DRAFT]') || formattedContent.toLowerCase().includes('report') || formattedContent.toLowerCase().includes('brief')) && (
+        <button 
+          onClick={() => generatePdfReport(formattedContent, formattedContent.includes('[WORK ORDER DRAFT]') ? 'Work_Order' : 'Report')}
+          style={{ marginTop: 8, background: 'rgba(52,211,153,0.1)', color: 'var(--good)', border: '1px solid rgba(52,211,153,0.3)', padding: '4px 8px', borderRadius: 4, fontSize: '0.65rem', cursor: 'pointer', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>
+          📄 Export Industrial PDF
+        </button>
+      )}
+
       {isUser && (
         <div style={{ fontSize: '0.6rem', color: 'var(--t3)', textAlign: 'right', marginTop: 3, paddingRight: 2 }}>
           {formatTime(msg.timestamp)}
@@ -245,6 +255,28 @@ export default function StatefulChatPanel({ fullPage }: { fullPage?: boolean }) 
       }
     })
     .catch(console.error);
+  };
+
+  const loadMemoryHistory = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/memory');
+      const data = await res.json();
+      if (data.history && data.history.length > 0) {
+        const mems = data.history.map((h: any) => h.content || h.text || JSON.stringify(h)).slice(0,10).join('\n\n---\n');
+        setMessages(p => [...p, {
+          role: 'system',
+          content: `**[Supermemory Archives Retreived]**\n\n${mems}`,
+          timestamp: new Date()
+        }]);
+      } else {
+        setMessages(p => [...p, { role: 'system', content: 'No prior Supermemory history found yet.', timestamp: new Date() }]);
+      }
+    } catch (e: any) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const send = useCallback(async (text: string) => {
@@ -344,7 +376,13 @@ export default function StatefulChatPanel({ fullPage }: { fullPage?: boolean }) 
               {proactiveAlerts.length} alert{proactiveAlerts.length > 1 ? 's' : ''}
             </span>
           )}
-          <span className="track-badge track3">T3 · Stateful</span>
+          <button 
+             onClick={loadMemoryHistory}
+             title="Load Chat History from Supermemory"
+             style={{ fontSize: '0.6rem', color: 'var(--blue)', background: 'rgba(120,180,255,0.1)', border: '1px solid var(--border-blue)', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontWeight: 600 }}
+          >
+            🧠 Memory History
+          </button>
         </div>
       </div>
 

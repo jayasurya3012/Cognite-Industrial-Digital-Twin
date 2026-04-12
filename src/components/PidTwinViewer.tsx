@@ -195,9 +195,8 @@ export default function PidTwinViewer() {
           <div className="subtitle">Source: [pid_hp_separation_train.svg] · [digital_twin_clean.json] · Live sensor overlays from [timeseries.csv]</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="track-badge track1">Track 1 · Transparent</span>
           {proactiveAlerts.length > 0 && (
-            <span className="track-badge track2">{proactiveAlerts.length} Alert{proactiveAlerts.length > 1 ? 's' : ''}</span>
+            <span style={{ background: 'var(--alarm-dim)', border: '1px solid rgba(251,191,36,0.3)', color: 'var(--alarm)', padding: '2px 8px', borderRadius: 20, fontSize: '0.6rem', fontWeight: 600 }}>{proactiveAlerts.length} Alert{proactiveAlerts.length > 1 ? 's' : ''}</span>
           )}
         </div>
       </div>

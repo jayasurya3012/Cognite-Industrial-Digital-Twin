@@ -463,7 +463,6 @@ export default function DigitalTwinViewer() {
     <div className="panel">
       <div className="panel-header">
         <h2>3D Visual Twin — HP Separation Train</h2>
-        <span className="track-badge track1">Track 1 · Transparent</span>
       </div>
 
       <div className="viewer-container">

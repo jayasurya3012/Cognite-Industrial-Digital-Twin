@@ -314,7 +314,7 @@ export default function OperationalCommandPanel({ fullPage }: { fullPage?: boole
               {activeAlerts.length} ALERT{activeAlerts.length > 1 ? 'S' : ''}
             </span>
           )}
-          <span className="track-badge track2">T2 · PROACTIVE</span>
+          {/* Removed track badge */}
         </div>
       </div>
 

@@ -63,9 +63,7 @@ export default function ThreePanelDashboard() {
         <div className="header-right">
           {/* Innovation Track badges */}
           <div style={{ display: 'flex', gap: 6 }}>
-            <span className="track-badge track1" title="Track 1: Transparent & Contextual AI — All data cited to source">T1 Transparent</span>
-            <span className="track-badge track2" title="Track 2: Proactive AI — V-101 72 barg guardrail active">T2 Proactive</span>
-            <span className="track-badge track3" title="Track 3: Stateful AI — Maintenance memory loaded">T3 Stateful</span>
+            {/* Removed Track Labels */}
           </div>
           <PlatformStatusBadge />
           <LiveClock />

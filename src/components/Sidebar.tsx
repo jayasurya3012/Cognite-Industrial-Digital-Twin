@@ -88,7 +88,7 @@ export default function Sidebar() {
                 <div className="sidebar-item-label">{item.label}</div>
                 <div className="sidebar-item-sub">{item.sub}</div>
               </div>
-              <span className={`track-badge ${item.tc}`} style={{ fontSize: '0.5rem', padding: '1px 5px' }}>{item.track}</span>
+              <span style={{ fontSize: '0.5rem', padding: '1px 5px' }}></span>
             </Link>
           );
         })}
