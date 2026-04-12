@@ -150,6 +150,34 @@ export function useLiveTelemetry() {
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [fetchTelemetry]);
 
+  // ---- TRACK 2 TRIGGER RULE (Database Watcher) ----
+  // Runs whenever readings are updated, handling both live data and mock triggers cleanly.
+  useEffect(() => {
+    const pt101a = readings.find(r => 
+      (r.sensor_id === 'PT-101A' || r.sensor_id === 'V-101-PRESS' || r.sensor_id === 'PT101A') &&
+      r.quality_flag === 'GOOD'
+    );
+    
+    if (pt101a && pt101a.value >= 72) {
+      if (!sessionStorage.getItem('vapi_triggered')) {
+        sessionStorage.setItem('vapi_triggered', 'true');
+        console.warn(`[Track 2 Initiated] V-101 Pressure Breach detected: ${pt101a.value} barg.`);
+        
+        // Dispatch DOM event for Chat Panel sync
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('init-vapi-call', { detail: { value: pt101a.value, limit: 72, asset: 'V-101' } }));
+        }
+
+        // Trigger server-side Vapi Collaborative Agent outcall
+        fetch('/api/vapi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ asset_id: 'AREA-HP-SEP:V-101', value: pt101a.value, limit: 72 })
+        }).then(res => res.json()).catch(err => console.error("Vapi Call failed:", err));
+      }
+    }
+  }, [readings]);
+
   return { readings, assetHealth, proactiveAlerts, loading, error, refetch: fetchTelemetry };
 }
 
@@ -160,9 +188,9 @@ function useMockData(
   setProactiveAlerts: any
 ) {
   const now = new Date().toISOString();
-  // Simulate V-101 pressure at 71.5 barg (near trip — will trigger warning)
+    // Simulate V-101 pressure at 73 barg (trigger point for VAPI outcall test!)
   const readings: LiveSensorReading[] = [
-    { sensor_id: 'V-101-PRESS', asset_id: 'AREA-HP-SEP:V-101', value: 71.5, unit: 'bar', quality_flag: 'GOOD', status: 'ALARM', sensor_type: 'PRESSURE', timestamp: now },
+    { sensor_id: 'PT-101A', asset_id: 'AREA-HP-SEP:V-101', value: 73.1, unit: 'bar', quality_flag: 'GOOD', status: 'TRIP', sensor_type: 'PRESSURE', timestamp: now },
     { sensor_id: 'V-101-LEVEL', asset_id: 'AREA-HP-SEP:V-101', value: 52.3, unit: '%', quality_flag: 'GOOD', status: 'GOOD', sensor_type: 'LEVEL', timestamp: now },
     { sensor_id: 'V-101-TEMP', asset_id: 'AREA-HP-SEP:V-101', value: 67.4, unit: 'degC', quality_flag: 'GOOD', status: 'GOOD', sensor_type: 'TEMPERATURE', timestamp: now },
     { sensor_id: 'V-101-GAS_FLOW', asset_id: 'AREA-HP-SEP:V-101', value: 9.2, unit: 'MMscfd', quality_flag: 'GOOD', status: 'GOOD', sensor_type: 'FLOW', timestamp: now },

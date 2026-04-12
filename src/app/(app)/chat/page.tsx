@@ -8,7 +8,6 @@ export const metadata = {
 export default function ChatPage() {
   return (
     <div style={{ display: 'flex', flex: 1, overflow: 'hidden', height: '100%' }}>
-      {/* @ts-expect-error fullPage is a valid prop defined in StatefulChatPanel */}
       <StatefulChatPanel fullPage />
     </div>
   );

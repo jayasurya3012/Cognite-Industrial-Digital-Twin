@@ -191,10 +191,10 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
   );
 }
 
-export default function StatefulChatPanel({ fullPage }: { fullPage?: boolean }) {
+export default function TwinChatPanel({ fullPage }: { fullPage?: boolean }) {
   const [messages, setMessages] = useState<ChatMessage[]>([{
     role: 'assistant',
-    content: `**Welcome to NPA Field Operations AI**\n\nThe Collaborative Context Engine is online. I automatically cross-reference:\n• 3.07M sensor readings\n• Historical Maintenance Logs\n• Safety Guards (e.g. 75 barg V-101 limit)\n\nType **@** to tag a specific asset. How can I assist?`,
+    content: `**Twin Context Engine Online**\n\nI am synchronized with the 3D spatial model. I can analyze asset health, performance historicals, and the connections in the 3D space.\n\nType **@** to focus on an asset. How can I help you navigate the platform today?`,
     timestamp: new Date(),
     citations: [],
   }]);
@@ -325,26 +325,21 @@ export default function StatefulChatPanel({ fullPage }: { fullPage?: boolean }) 
     <div className="panel" style={fullPage ? { flex: 1 } : {}}>
       <div className="panel-header">
         <div>
-          <h1 style={{ fontSize: '0.9rem' }}>AI Operations Agent</h1>
-          <div style={{ fontSize: '0.6rem', color: 'var(--t3)', marginTop: 2 }}>
-            Groq · llama-3.3-70b-versatile · Stateful memory
+          <h1 style={{ fontSize: '0.9rem', color: '#00d4ff' }}>Twin Context Engine</h1>
+          <div style={{ fontSize: '0.6rem', color: 'rgba(0, 212, 255, 0.6)', marginTop: 2 }}>
+            Spatial Awareness Mode · Groq LPU
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           {/* Track 2 Agent Test Hook */}
           <button 
             onClick={triggerFieldManagerCall}
-            style={{ fontSize: '0.6rem', background: '#ef4444', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}
+            style={{ fontSize: '0.6rem', background: 'rgba(0, 212, 255, 0.15)', color: '#00d4ff', border: '1px solid rgba(0, 212, 255, 0.4)', padding: '4px 8px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}
           >
-            📞 Inform Field Manager
+            📞 Test Agent Outcall
           </button>
           
-          {proactiveAlerts.length > 0 && (
-            <span style={{ fontSize: '0.58rem', background: 'var(--alarm-dim)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 20, padding: '2px 8px', color: 'var(--alarm)', fontWeight: 600 }}>
-              {proactiveAlerts.length} alert{proactiveAlerts.length > 1 ? 's' : ''}
-            </span>
-          )}
-          <span className="track-badge track3">T3 · Stateful</span>
+          <span className="track-badge" style={{ background: 'rgba(0, 212, 255, 0.1)', color: '#00d4ff', border: '1px solid rgba(0, 212, 255, 0.2)' }}>T2 · Proactive</span>
         </div>
       </div>
 

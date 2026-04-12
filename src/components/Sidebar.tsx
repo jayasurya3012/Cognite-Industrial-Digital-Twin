@@ -25,7 +25,7 @@ const ICONS = {
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: 'dashboard', label: 'Command',   sub: 'KPIs & Alerts',  track: 'T2', tc: 'track2' },
-  { href: '/twin',      icon: 'twin',      label: 'P&ID Twin', sub: 'Live Diagram',   track: 'T1', tc: 'track1' },
+  { href: '/twin',      icon: 'twin',      label: 'Digital Twin', sub: 'Live 3D Viewer',  track: 'T1', tc: 'track1' },
   { href: '/chat',      icon: 'chat',      label: 'AI Agent',  sub: 'Stateful Memory',track: 'T3', tc: 'track3' },
 ] as const;
 
