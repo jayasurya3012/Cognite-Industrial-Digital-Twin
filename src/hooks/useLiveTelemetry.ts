@@ -172,7 +172,13 @@ export function useLiveTelemetry() {
         fetch('/api/vapi', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ asset_id: 'AREA-HP-SEP:V-101', value: pt101a.value, limit: 72 })
+          body: JSON.stringify({ 
+            asset_id: 'AREA-HP-SEP:V-101', 
+            value: pt101a.value, 
+            limit: 72,
+            message: `Collaborative Alert: V-101 pressure has hit ${pt101a.value} barg. This is an autonomous brief to coordinate the maintenance lockout.`,
+            planOfAction: `1. Confirm SDV-101 trip closure.\n2. Manual check of PSV-101 reseat.\n3. Inspection of P-101A bearing vibration trend.`
+          })
         }).then(res => res.json()).catch(err => console.error("Vapi Call failed:", err));
       }
     }

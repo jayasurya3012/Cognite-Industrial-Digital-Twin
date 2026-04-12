@@ -378,6 +378,11 @@ export default function SceneCanvas({ focusedAsset, onSelectAsset }) {
   const [simRunning, setSimRunning] = useState(false);   // ← starts idle
   const [simFinished, setSimFinished] = useState(false);
   const alertShownRef = useRef(false);
+  const simVapiCalledRef = useRef(false);
+
+  // Choose which data to render
+  const activeSimData = simRunning ? simData : null;
+  const activePhase  = simRunning ? phase : 'normal';
 
   // Detect simulation end (looped back to step 0 after running)
   useEffect(() => {
@@ -397,12 +402,31 @@ export default function SceneCanvas({ focusedAsset, onSelectAsset }) {
     if ((phase === 'trip' || phase === 'esd') && !alertShownRef.current) {
       alertShownRef.current = true;
       setShowAlert(true);
+
+      // ── Track 2 Trigger: Auto-call Field Manager during simulation critical ──
+      if (!simVapiCalledRef.current) {
+        simVapiCalledRef.current = true;
+        const currentPressure = activeSimData?.['V-101_PRESSURE'] || 72.4;
+        
+        fetch('/api/vapi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            asset_id: 'AREA-HP-SEP:V-101',
+            value: currentPressure,
+            limit: 72,
+            message: `Emergency Alert: PSHH-101 Trip detected on V-101. Pressure is ${currentPressure} barg. SDV-101 is closing. I am initiating the ESD sequence.`,
+            planOfAction: `1. Verify SDV-101 full closure.\n2. Flare system check (PSV-101).\n3. Standby pump P-101B start verified.\n4. Isolate HP Train for inspection.`
+          })
+        }).catch(err => console.error('Simulation Vapi trigger failed:', err));
+      }
     }
-  }, [phase, simRunning]);
+  }, [phase, simRunning, activeSimData]);
 
   const handleStart = () => {
     restart();
     alertShownRef.current = false;
+    simVapiCalledRef.current = false;
     setSimFinished(false);
     setSimRunning(true);
     setShowAlert(false);
@@ -411,13 +435,10 @@ export default function SceneCanvas({ focusedAsset, onSelectAsset }) {
   const handleRestart = () => {
     restart();
     alertShownRef.current = false;
+    simVapiCalledRef.current = false;
     setSimFinished(false);
     setShowAlert(false);
   };
-
-  // Choose which data to render
-  const activeSimData = simRunning ? simData : null;
-  const activePhase  = simRunning ? phase : 'normal';
 
   // healthMap
   const healthMap = useMemo(() => ({

@@ -3,38 +3,45 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { asset_id, value, limit } = body;
+    const { asset_id, value, limit, message, planOfAction } = body;
 
     const apiKey = process.env.VAPI_API_KEY;
     if (!apiKey) {
       return NextResponse.json({ error: 'VAPI_API_KEY not configured' }, { status: 500 });
     }
 
+    const defaultFirstMsg = `Alert: Critical Pressure on ${asset_id}. Current value is ${value} barg. This exceeds the ${limit} barg trip limit. Are you available to acknowledge?`;
+    const defaultPlan = `1. Verify SDV-101 closure.\n2. Monitor PSV-101 discharge flow.\n3. Manual switch to P-101B.`;
+
     const payload: any = {
       customer: {
-        number: '+14806900972',
+        number: body.phoneNumber || process.env.MANAGER_PHONE_NUMBER || '+14806900972',
       },
       assistant: {
-        firstMessage: `Alert: Critical Pressure on ${asset_id}. Current value is ${value} barg. This exceeds the ${limit} barg trip limit defined in NPA-PID-001. The last service for this unit was October 2025. Are you available to acknowledge?`,
+        name: 'NPA Proactive Agent',
+        firstMessage: message || defaultFirstMsg,
         model: {
-          provider: 'groq',
-          model: 'llama3-70b-8192',
+          provider: 'openai',
+          model: 'gpt-4o-mini',
           messages: [
             {
               role: 'system',
-              content: `You are the NPA Proactive Background Agent (Track 2: Collaborative AI). 
-Your job is to alert the human Field Manager about a critical pressure spike.
-Context:
+              content: `You are the NPA Proactive Background Agent. 
+You are speaking to the Field Manager about a critical failure.
+Details:
 - Asset: ${asset_id}
-- Issue: Pressure reached ${value} barg, which exceeds the trip limit of ${limit} barg according to NPA-PID-001 (Source citation matching Track 1 Transparency).
-- Statefulness (Track 3): You MUST remember and state that 'the last service for this unit was October 2025'.
-Be concise, urgent, and professional. Once the manager acknowledges, say you will log the call in the system and generate an artifact work order.`,
+- Reading: ${value} barg (Limit: ${limit} barg)
+- Failure: PSHH-101 Trip and SDV-101 unintended closure.
+- Plan of Action:
+${planOfAction || defaultPlan}
+
+Be concise, urgent, and professional. Ensure the manager knows the actions taken autonomously (LOTO checks) and what they need to approve.`,
             },
           ],
         },
         voice: {
-          provider: '11labs',
-          voiceId: 'bIHbv24MWmeRgasZH58o', // default ElevenLabs voice
+          provider: 'playht',
+          voiceId: 'jennifer',
         },
       },
     };
@@ -56,6 +63,7 @@ Be concise, urgent, and professional. Once the manager acknowledges, say you wil
     });
 
     const vapiData = await vapiRes.json();
+    console.log('Vapi Response Data:', JSON.stringify(vapiData, null, 2));
 
     if (!vapiRes.ok) {
       console.error('Vapi Call Failed:', vapiData);

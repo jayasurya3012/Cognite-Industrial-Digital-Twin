@@ -332,7 +332,7 @@ export default function StatefulChatPanel({ fullPage }: { fullPage?: boolean }) 
       const { value, limit, asset } = e.detail;
       setMessages(p => [...p, {
         role: 'system',
-        content: `⚠️ SYSTEM PROTOCOL INITIATED ⚠️\n\nCRITICAL: **${asset} Pressure at ${value} barg.**\nThis exceeds the ${limit} barg limit. Initiating autonomous emergency Voice AI call to Field Manager (+14806900972) to relay maintenance history payload...`,
+        content: `⚠️ SYSTEM PROTOCOL INITIATED ⚠️\n\nCRITICAL: **${asset} Pressure at ${value} barg.**\nThis exceeds the ${limit} barg limit. Initiating autonomous emergency Voice AI call to Field Manager to relay maintenance history payload...`,
         timestamp: new Date()
       }]);
     };
@@ -341,7 +341,7 @@ export default function StatefulChatPanel({ fullPage }: { fullPage?: boolean }) 
   }, []);
 
   const triggerFieldManagerCall = () => {
-    const mockVal = 73.1;
+    const mockVal = 73.8;
     // Visually push the prompt into chat window
     window.dispatchEvent(new CustomEvent('init-vapi-call', { detail: { value: mockVal, limit: 72, asset: 'V-101' } }));
     
@@ -349,15 +349,22 @@ export default function StatefulChatPanel({ fullPage }: { fullPage?: boolean }) 
     fetch('/api/vapi', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ asset_id: 'AREA-HP-SEP:V-101', value: mockVal, limit: 72 })
+      body: JSON.stringify({ 
+        asset_id: 'AREA-HP-SEP:V-101', 
+        value: mockVal, 
+        limit: 72,
+        message: `Manual Alert: Field Manager, we have a sustained overpressure on V-101 at ${mockVal} barg. I am initiating a collaborative brief to discuss the isolation plan.`,
+        planOfAction: `1. Emergency Blowdown sequence.\n2. LOTO for LCV-101.\n3. Verify Flare Header alignment.\n4. Divert Wellstream to Test Separator.`
+      })
     })
     .then(res => res.json())
     .then(data => {
       if (data.error) {
-        // Output visual fallback into chat explicitly instructing on missing Phone ID
+        // Surface the specific error from Vapi (e.g. invalid phone ID, out of credits, etc)
+        const detail = data.details?.message || data.details?.error || 'Unknown Vapi Error';
         setMessages(p => [...p, {
           role: 'system',
-          content: `❌ **VAPI OUTBOUND ERR:** The call failed to originate. \n\nVapi requires a valid, purchased source Caller ID to hit the PSTN. You must log into [Vapi.ai](https://dashboard.vapi.ai/), purchase a quick $1 phone number, grab the resulting **Phone Number ID**, and add it to your \`.env.local\` as \`VAPI_PHONE_NUMBER_ID=...\`!`,
+          content: `❌ **VAPI CALL ERROR:** ${detail}\n\n**Common Fixes:**\n1. Ensure your \`VAPI_PHONE_NUMBER_ID\` has outbound permissions.\n2. Verify your Vapi account has credits.\n3. Check your \`VAPI_API_KEY\` is correct.`,
           timestamp: new Date()
         }]);
       }
@@ -454,12 +461,14 @@ export default function StatefulChatPanel({ fullPage }: { fullPage?: boolean }) 
         </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           {/* Track 2 Agent Test Hook */}
-          <button 
-            onClick={triggerFieldManagerCall}
-            style={{ fontSize: '0.6rem', background: '#ef4444', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}
-          >
-            Inform Field Manager
-          </button>
+          <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+            <button 
+              onClick={triggerFieldManagerCall}
+              style={{ fontSize: '0.6rem', background: '#ef4444', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}
+            >
+              Alert Field Manager
+            </button>
+          </div>
           
           {proactiveAlerts.length > 0 && (
             <span style={{ fontSize: '0.58rem', background: 'var(--alarm-dim)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 20, padding: '2px 8px', color: 'var(--alarm)', fontWeight: 600 }}>
