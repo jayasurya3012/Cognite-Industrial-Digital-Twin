@@ -40,8 +40,8 @@ Be concise, urgent, and professional. Ensure the manager knows the actions taken
           ],
         },
         voice: {
-          provider: 'playht',
-          voiceId: 'jennifer',
+          provider: 'cartesia',
+          voiceId: '248be419-caca-40ef-8914-aa11c6bad288',
         },
       },
     };
