@@ -155,10 +155,12 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
       .replace(/`(.*?)`/g, '<code style="background:rgba(120,180,255,0.1);padding:1px 6px;border-radius:4px;font-family:monospace;font-size:0.82em;color:var(--blue)">$1</code>')
       .replace(/\[WORK ORDER DRAFT\]/g, '<span style="color:var(--alarm);font-weight:800">[WORK ORDER DRAFT]</span>')
       .replace(/---\n?([\s\S]*?)\n?---/g, '<div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:6px;padding:12px 16px;margin:12px 0;font-family:monospace;font-size:0.8em;white-space:pre-wrap;color:var(--t2)">$1</div>')
-      .replace(/\[([A-Z]+-[a-zA-Z]+-\d+(?:#[^\]\s]+)?)\]/g, (match, p1) => {
-        const parts = p1.split('#');
-        const href = DOC_LINKS[parts[0]] ? `${DOC_LINKS[parts[0]]}${parts[1] ? '#' + parts[1] : ''}` : '#';
-        return `<a href="${href}" target="_blank" style="color:var(--blue);text-decoration:none;font-weight:700;background:rgba(120,180,255,0.1);padding:2px 6px;border-radius:4px" title="Open source document">📎 ${parts[0]}</a>`;
+      .replace(/\[([A-Z]+-[a-zA-Z]+-\d+)(?:#[^\]\s]*)?\]/g, (match, p1) => {
+        const parts = match.slice(1, -1).split('#');
+        const docId = parts[0];
+        const hash = parts[1] ? '#' + parts[1] : '';
+        const href = DOC_LINKS[docId] ? `${DOC_LINKS[docId]}${hash}` : '#';
+        return `<a href="${href}" target="_blank" style="color:var(--blue);text-decoration:none;font-weight:700;background:rgba(120,180,255,0.1);padding:2px 6px;border-radius:4px" title="Open source document">📎 ${docId}</a>`;
       })
       .replace(/\n/g, '<br/>');
   };
@@ -368,7 +370,7 @@ export default function StatefulChatPanel({ fullPage }: { fullPage?: boolean }) 
             onClick={triggerFieldManagerCall}
             style={{ fontSize: '0.6rem', background: '#ef4444', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}
           >
-            📞 Inform Field Manager
+            Inform Field Manager
           </button>
           
           {proactiveAlerts.length > 0 && (
@@ -381,7 +383,7 @@ export default function StatefulChatPanel({ fullPage }: { fullPage?: boolean }) 
              title="Load Chat History from Supermemory"
              style={{ fontSize: '0.6rem', color: 'var(--blue)', background: 'rgba(120,180,255,0.1)', border: '1px solid var(--border-blue)', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontWeight: 600 }}
           >
-            🧠 Memory History
+            Memory History
           </button>
         </div>
       </div>
