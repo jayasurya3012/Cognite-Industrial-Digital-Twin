@@ -5,7 +5,7 @@ import { useLiveTelemetry } from '@/hooks/useLiveTelemetry';
 
 type TwinContextAssistantProps = {
   selectedAsset: string | null;
-  onSelectAsset: (assetId: string) => void;
+  onSelectAsset: (assetId: string | null) => void;
 };
 
 type TwinChatMessage = {
@@ -13,21 +13,41 @@ type TwinChatMessage = {
   content: string;
 };
 
+const DOC_LINKS: Record<string, string> = {
+  'SOP-MAINT-001': '/docs/SOP-MAINT-001.pdf',
+  'SOP-MAINT-010': '/docs/SOP-MAINT-010.pdf',
+  'SOP-OPS-001': '/docs/SOP-OPS-001.pdf',
+  'SOP-OPS-002': '/docs/SOP-OPS-002.pdf',
+  'SOP-OPS-010': '/docs/SOP-OPS-010.pdf',
+  'SOP-ENV-001': '/docs/SOP-ENV-001.pdf',
+  'SOP-SAFE-001': '/docs/SOP-SAFE-001.pdf',
+  'MAN-MECH-001': '/docs/MAN-MECH-001.pdf',
+  'MAN-INST-001': '/docs/MAN-INST-001.pdf',
+  'RPT-INSPECT-001': '/docs/RPT-INSPECT-001.pdf',
+  'PID-NPA-001': '/docs/PID-NPA-001.pdf',
+  'NPA-ESD-CEF-001': '/docs/NPA-ESD-CEF-001.pdf',
+};
+
 const ASSET_TAGS = [
-  { tag: 'V-101', assetId: 'AREA-HP-SEP:V-101', label: 'HP Separator' },
-  { tag: 'V-102', assetId: 'AREA-HP-SEP:V-102', label: 'Test Separator' },
-  { tag: 'E-101', assetId: 'AREA-HP-SEP:E-101', label: 'Wellstream Heater' },
-  { tag: 'E-102', assetId: 'AREA-HP-SEP:E-102', label: 'Glycol Reboiler' },
-  { tag: 'P-101', assetId: 'AREA-HP-SEP:P-101', label: 'Drain Pumps' },
-  { tag: 'P-101A', assetId: 'AREA-HP-SEP:P-101', label: 'Drain Pump A' },
-  { tag: 'P-101B', assetId: 'AREA-HP-SEP:P-101', label: 'Drain Pump B' },
-  { tag: 'PCV-101', assetId: 'AREA-HP-SEP:V-101', label: 'Pressure Control Valve' },
-  { tag: 'LCV-101', assetId: 'AREA-HP-SEP:V-101', label: 'Level Control Valve' },
+  { tag: 'V-101', sceneId: 'V-101', contextId: 'AREA-HP-SEP:V-101', label: 'HP Separator' },
+  { tag: 'V-102', sceneId: 'V-102', contextId: 'AREA-HP-SEP:V-102', label: 'Test Separator' },
+  { tag: 'E-101', sceneId: 'E-101', contextId: 'AREA-HP-SEP:E-101', label: 'Wellstream Heater' },
+  { tag: 'E-102', sceneId: 'E-102', contextId: 'AREA-HP-SEP:E-102', label: 'Glycol Reboiler' },
+  { tag: 'P-101', sceneId: 'P-101A', contextId: 'AREA-HP-SEP:P-101', label: 'Drain Pumps' },
+  { tag: 'P-101A', sceneId: 'P-101A', contextId: 'AREA-HP-SEP:P-101', label: 'Drain Pump A' },
+  { tag: 'P-101B', sceneId: 'P-101B', contextId: 'AREA-HP-SEP:P-101', label: 'Drain Pump B' },
+  { tag: 'PCV-101', sceneId: 'PCV-101', contextId: 'AREA-HP-SEP:V-101', label: 'Pressure Control Valve' },
+  { tag: 'LCV-101', sceneId: 'LCV-101', contextId: 'AREA-HP-SEP:V-101', label: 'Level Control Valve' },
 ] as const;
 
 function detectAssetTag(text: string) {
   const upper = text.toUpperCase();
   return ASSET_TAGS.find(asset => upper.includes(`@${asset.tag}`) || upper.includes(asset.tag)) || null;
+}
+
+function getContextId(sceneId: string | null) {
+  if (!sceneId) return '';
+  return ASSET_TAGS.find(asset => asset.sceneId === sceneId)?.contextId || '';
 }
 
 function formatReading(value: number, unit?: string) {
@@ -40,6 +60,56 @@ function buildAssetSummary(asset: any) {
     `${sensor.sensor_id}: ${formatReading(sensor.value, sensor.unit)} (${sensor.status})`
   );
   return `${asset.name}\n${readings.join('\n')}`;
+}
+
+function renderInlineMessage(content: string, keyPrefix: string) {
+  const parts = content.split(/(\[[A-Z]+-[A-Z]+-\d+(?:#[^\]\s]*)?\]|\*\*.*?\*\*|`.*?`)/g).filter(Boolean);
+
+  return parts.map((part, index) => {
+    const key = `${keyPrefix}-${index}`;
+
+    if (part.startsWith('[') && part.endsWith(']')) {
+      const citation = part.slice(1, -1);
+      const [baseId, fragment] = citation.split('#');
+      const href = DOC_LINKS[baseId];
+
+      if (href) {
+        return (
+          <a
+            key={key}
+            href={`${href}${fragment ? `#${fragment}` : ''}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              margin: '0 2px',
+              color: '#93c5fd',
+              textDecoration: 'none',
+              fontWeight: 700,
+            }}
+          >
+            {baseId}
+          </a>
+        );
+      }
+    }
+
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={key}>{part.slice(2, -2)}</strong>;
+    }
+
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return (
+        <code key={key} style={{ color: '#93c5fd', fontFamily: 'JetBrains Mono, monospace' }}>
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+
+    return <span key={key}>{part}</span>;
+  });
 }
 
 export default function TwinContextAssistant({ selectedAsset, onSelectAsset }: TwinContextAssistantProps) {
@@ -55,17 +125,18 @@ export default function TwinContextAssistant({ selectedAsset, onSelectAsset }: T
   ]);
 
   const selectedAssetData = useMemo(
-    () => assetHealth.find(asset => asset.asset_id === selectedAsset) || null,
+    () => assetHealth.find(asset => asset.asset_id === getContextId(selectedAsset)) || null,
     [assetHealth, selectedAsset]
   );
 
   const quickAssets = ASSET_TAGS.filter((asset, index, all) =>
-    all.findIndex(item => item.assetId === asset.assetId) === index
+    all.findIndex(item => item.sceneId === asset.sceneId) === index
   );
 
-  const focusAsset = (assetId: string) => {
-    onSelectAsset(assetId);
-    const asset = assetHealth.find(item => item.asset_id === assetId);
+  const focusAsset = (sceneId: string) => {
+    onSelectAsset(sceneId);
+    setOpen(true);
+    const asset = assetHealth.find(item => item.asset_id === getContextId(sceneId));
     if (!asset) return;
 
     setMessages(prev => [
@@ -77,12 +148,17 @@ export default function TwinContextAssistant({ selectedAsset, onSelectAsset }: T
     ]);
   };
 
+  const resetView = () => {
+    onSelectAsset(null);
+  };
+
   const send = async (text: string) => {
     if (!text.trim() || loading) return;
 
     const assetTag = detectAssetTag(text);
     if (assetTag) {
-      onSelectAsset(assetTag.assetId);
+      onSelectAsset(assetTag.sceneId);
+      setOpen(true);
     }
 
     const userMessage = { role: 'user' as const, content: text.trim() };
@@ -99,7 +175,7 @@ export default function TwinContextAssistant({ selectedAsset, onSelectAsset }: T
             role: message.role,
             content: message.content,
           })),
-          assetContext: assetTag?.assetId || selectedAsset || '',
+          assetContext: assetTag?.contextId || getContextId(selectedAsset) || '',
         }),
       });
 
@@ -143,6 +219,27 @@ export default function TwinContextAssistant({ selectedAsset, onSelectAsset }: T
         }}
       >
         {open ? 'Close Asset Chat' : 'Open Asset Chat'}
+      </button>
+
+      <button
+        onClick={resetView}
+        style={{
+          position: 'absolute',
+          right: 170,
+          bottom: 18,
+          zIndex: 30,
+          border: '1px solid rgba(255,255,255,0.18)',
+          background: 'rgba(7,12,20,0.9)',
+          color: '#e2e8f0',
+          borderRadius: 999,
+          padding: '10px 14px',
+          cursor: 'pointer',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.28)',
+          fontSize: '0.72rem',
+          fontWeight: 700,
+        }}
+      >
+        Reset View
       </button>
 
       {selectedAssetData && (
@@ -221,8 +318,8 @@ export default function TwinContextAssistant({ selectedAsset, onSelectAsset }: T
           <div style={{ display: 'flex', gap: 6, padding: '10px 12px 0', flexWrap: 'wrap' }}>
             {quickAssets.map(asset => (
               <button
-                key={asset.assetId}
-                onClick={() => focusAsset(asset.assetId)}
+                key={`${asset.sceneId}-${asset.tag}`}
+                onClick={() => focusAsset(asset.sceneId)}
                 style={{
                   border: '1px solid rgba(120,180,255,0.22)',
                   background: 'rgba(120,180,255,0.08)',
@@ -255,7 +352,7 @@ export default function TwinContextAssistant({ selectedAsset, onSelectAsset }: T
                   lineHeight: 1.55,
                 }}
               >
-                {message.content.replace(/\*\*(.*?)\*\*/g, '$1')}
+                {renderInlineMessage(message.content, `${message.role}-${index}`)}
               </div>
             ))}
             {loading && (
@@ -292,22 +389,39 @@ export default function TwinContextAssistant({ selectedAsset, onSelectAsset }: T
               <div style={{ fontSize: '0.58rem', color: 'var(--t3)' }}>
                 {selectedAssetData ? `Focused: ${selectedAssetData.name}` : 'No asset selected'}
               </div>
-              <button
-                onClick={() => send(input)}
-                disabled={loading || !input.trim()}
-                style={{
-                  border: 'none',
-                  background: loading || !input.trim() ? 'rgba(120,180,255,0.18)' : 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                  color: '#fff',
-                  borderRadius: 10,
-                  padding: '8px 12px',
-                  cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
-                  fontSize: '0.68rem',
-                  fontWeight: 700,
-                }}
-              >
-                Send
-              </button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={resetView}
+                  style={{
+                    border: '1px solid rgba(255,255,255,0.14)',
+                    background: 'rgba(255,255,255,0.04)',
+                    color: '#e2e8f0',
+                    borderRadius: 10,
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  Reset
+                </button>
+                <button
+                  onClick={() => send(input)}
+                  disabled={loading || !input.trim()}
+                  style={{
+                    border: 'none',
+                    background: loading || !input.trim() ? 'rgba(120,180,255,0.18)' : 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                    color: '#fff',
+                    borderRadius: 10,
+                    padding: '8px 12px',
+                    cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  Send
+                </button>
+              </div>
             </div>
           </div>
         </div>

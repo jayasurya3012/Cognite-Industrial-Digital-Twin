@@ -6,13 +6,13 @@ import { Suspense, useEffect, useState } from 'react';
 import TwinContextAssistant from '@/components/TwinContextAssistant';
 
 const FOCUS_MAP: Record<string, string> = {
-  'V-101': 'AREA-HP-SEP:V-101',
-  'V-102': 'AREA-HP-SEP:V-102',
-  'E-101': 'AREA-HP-SEP:E-101',
-  'E-102': 'AREA-HP-SEP:E-102',
-  'P-101': 'AREA-HP-SEP:P-101',
-  'P-101A': 'AREA-HP-SEP:P-101',
-  'P-101B': 'AREA-HP-SEP:P-101',
+  'V-101': 'V-101',
+  'V-102': 'V-102',
+  'E-101': 'E-101',
+  'E-102': 'E-102',
+  'P-101': 'P-101A',
+  'P-101A': 'P-101A',
+  'P-101B': 'P-101B',
   'LCV-101': 'LCV-101',
   'PCV-101': 'PCV-101',
   'SDV-101': 'SDV-101',

@@ -42,15 +42,127 @@ function formatTime(d: Date) {
   return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
-function cleanAssistantText(content: string) {
-  return content
-    .replace(/\`\`\`recharts[\s\S]*?\`\`\`/g, '')
-    .replace(/\*\*(.*?)\*\*/g, '$1')
-    .replace(/`(.*?)`/g, '$1')
-    .replace(/\[([A-Z]+-[A-Z]+-\d+(?:#[^\]\s]*)?)\]/g, '')
+function renderInlineContent(content: string, keyPrefix: string) {
+  const parts = content.split(/(\[[A-Z]+-[A-Z]+-\d+(?:#[^\]\s]*)?\]|\*\*.*?\*\*|`.*?`)/g).filter(Boolean);
+
+  return parts.map((part, index) => {
+    const key = `${keyPrefix}-${index}`;
+
+    if (part.startsWith('[') && part.endsWith(']')) {
+      const citation = part.slice(1, -1);
+      return <CitationChip key={key} citation={citation} />;
+    }
+
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={key} style={{ color: 'var(--t1)' }}>{part.slice(2, -2)}</strong>;
+    }
+
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return (
+        <code
+          key={key}
+          style={{
+            background: 'rgba(120,180,255,0.1)',
+            padding: '1px 6px',
+            borderRadius: 4,
+            fontFamily: 'JetBrains Mono, monospace',
+            fontSize: '0.82em',
+            color: 'var(--blue)',
+          }}
+        >
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+
+    return <span key={key}>{part}</span>;
+  });
+}
+
+function renderStructuredContent(content: string, isUser: boolean) {
+  if (isUser) {
+    return <div style={{ whiteSpace: 'pre-wrap' }}>{content}</div>;
+  }
+
+  const normalized = content
+    .replace(/\r/g, '')
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+
+  const lines = normalized.split('\n');
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {lines.map((line, index) => {
+        const trimmed = line.trim();
+        const key = `line-${index}`;
+
+        if (!trimmed) {
+          return <div key={key} style={{ height: 4 }} />;
+        }
+
+        if (trimmed === '---') {
+          return <div key={key} style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '2px 0' }} />;
+        }
+
+        const numberedMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
+        if (numberedMatch) {
+          return (
+            <div key={key} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              <span style={{ color: 'var(--blue)', fontWeight: 700, minWidth: 18 }}>{numberedMatch[1]}.</span>
+              <div style={{ flex: 1 }}>{renderInlineContent(numberedMatch[2], key)}</div>
+            </div>
+          );
+        }
+
+        const bulletMatch = trimmed.match(/^[-*•]\s+(.*)$/);
+        if (bulletMatch) {
+          return (
+            <div key={key} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              <span style={{ color: 'var(--good)', minWidth: 12 }}>•</span>
+              <div style={{ flex: 1 }}>{renderInlineContent(bulletMatch[1], key)}</div>
+            </div>
+          );
+        }
+
+        const labeledMatch = trimmed.match(/^\*\*?([A-Z][A-Z\s/]+):\*?\*\s*(.*)$/);
+        if (labeledMatch) {
+          return (
+            <div
+              key={key}
+              style={{
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid var(--border)',
+                borderRadius: 10,
+                padding: '10px 12px',
+              }}
+            >
+              <div style={{ color: 'var(--blue)', fontSize: '0.64rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
+                {labeledMatch[1]}
+              </div>
+              <div>{renderInlineContent(labeledMatch[2], key)}</div>
+            </div>
+          );
+        }
+
+        const fullHeadingMatch = trimmed.match(/^\*\*(.+?)\*\*$/);
+        if (fullHeadingMatch) {
+          return (
+            <div key={key} style={{ color: 'var(--t1)', fontWeight: 700, fontSize: '0.95rem' }}>
+              {fullHeadingMatch[1]}
+            </div>
+          );
+        }
+
+        return (
+          <div key={key} style={{ whiteSpace: 'pre-wrap' }}>
+            {renderInlineContent(trimmed, key)}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function CitationChip({ citation }: { citation: string }) {
@@ -159,8 +271,6 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
     formattedContent = formattedContent.replace(match[0], '');
   }
 
-  const plainTextContent = isUser ? formattedContent : cleanAssistantText(formattedContent);
-
   return (
     <div style={{ alignSelf: isUser ? 'flex-end' : 'flex-start', width: isUser ? 'auto' : '92%', maxWidth: '92%' }}>
       {!isUser && (
@@ -172,7 +282,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
         className={`chat-bubble ${msg.role}`}
         style={{ width: '100%' }}
       >
-        <div>{plainTextContent}</div>
+        {renderStructuredContent(formattedContent, isUser)}
         {hasChart && <ChartRenderer jsonString={chartJson} />}
       </div>
       {msg.citations && msg.citations.length > 0 && (
