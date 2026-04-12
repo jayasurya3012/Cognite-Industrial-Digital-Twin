@@ -214,6 +214,31 @@ function WoRow({ wo }: { wo: WO }) {
   );
 }
 
+// ── Static Historical Averages ───────────────────────────────────────────
+const STATIC_HISTORICAL_READINGS: Record<string, LiveSensorReading[]> = {
+  '24H': [
+    { sensor_id: 'V-101-PRESS', value: 68.1, unit: 'barg', status: 'GOOD', sensor_type: 'PRESSURE', asset_id: 'AREA-HP-SEP:V-101', quality_flag: 'GOOD', timestamp: '' },
+    { sensor_id: 'V-101-LEVEL', value: 50.2, unit: '%', status: 'GOOD', sensor_type: 'LEVEL', asset_id: 'AREA-HP-SEP:V-101', quality_flag: 'GOOD', timestamp: '' },
+    { sensor_id: 'V-101-TEMP', value: 75.1, unit: '°C', status: 'GOOD', sensor_type: 'TEMPERATURE', asset_id: 'AREA-HP-SEP:V-101', quality_flag: 'GOOD', timestamp: '' },
+    { sensor_id: 'V-101-GAS_FLOW', value: 9.8, unit: 'MMscfd', status: 'GOOD', sensor_type: 'FLOW', asset_id: 'AREA-HP-SEP:V-101', quality_flag: 'GOOD', timestamp: '' },
+    { sensor_id: 'V-101-OIL_FLOW', value: 115.4, unit: 'm³/h', status: 'GOOD', sensor_type: 'FLOW', asset_id: 'AREA-HP-SEP:V-101', quality_flag: 'GOOD', timestamp: '' },
+  ],
+  '7D': [
+    { sensor_id: 'V-101-PRESS', value: 67.5, unit: 'barg', status: 'GOOD', sensor_type: 'PRESSURE', asset_id: 'AREA-HP-SEP:V-101', quality_flag: 'GOOD', timestamp: '' },
+    { sensor_id: 'V-101-LEVEL', value: 49.3, unit: '%', status: 'GOOD', sensor_type: 'LEVEL', asset_id: 'AREA-HP-SEP:V-101', quality_flag: 'GOOD', timestamp: '' },
+    { sensor_id: 'V-101-TEMP', value: 74.8, unit: '°C', status: 'GOOD', sensor_type: 'TEMPERATURE', asset_id: 'AREA-HP-SEP:V-101', quality_flag: 'GOOD', timestamp: '' },
+    { sensor_id: 'V-101-GAS_FLOW', value: 9.9, unit: 'MMscfd', status: 'GOOD', sensor_type: 'FLOW', asset_id: 'AREA-HP-SEP:V-101', quality_flag: 'GOOD', timestamp: '' },
+    { sensor_id: 'V-101-OIL_FLOW', value: 124.6, unit: 'm³/h', status: 'GOOD', sensor_type: 'FLOW', asset_id: 'AREA-HP-SEP:V-101', quality_flag: 'GOOD', timestamp: '' },
+  ],
+  '1M': [
+    { sensor_id: 'V-101-PRESS', value: 67.0, unit: 'barg', status: 'GOOD', sensor_type: 'PRESSURE', asset_id: 'AREA-HP-SEP:V-101', quality_flag: 'GOOD', timestamp: '' },
+    { sensor_id: 'V-101-LEVEL', value: 48.0, unit: '%', status: 'GOOD', sensor_type: 'LEVEL', asset_id: 'AREA-HP-SEP:V-101', quality_flag: 'GOOD', timestamp: '' },
+    { sensor_id: 'V-101-TEMP', value: 74.0, unit: '°C', status: 'GOOD', sensor_type: 'TEMPERATURE', asset_id: 'AREA-HP-SEP:V-101', quality_flag: 'GOOD', timestamp: '' },
+    { sensor_id: 'V-101-GAS_FLOW', value: 9.5, unit: 'MMscfd', status: 'GOOD', sensor_type: 'FLOW', asset_id: 'AREA-HP-SEP:V-101', quality_flag: 'GOOD', timestamp: '' },
+    { sensor_id: 'V-101-OIL_FLOW', value: 131.2, unit: 'm³/h', status: 'GOOD', sensor_type: 'FLOW', asset_id: 'AREA-HP-SEP:V-101', quality_flag: 'GOOD', timestamp: '' },
+  ],
+};
+
 // ══════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ══════════════════════════════════════════════════════════════════════
@@ -230,16 +255,19 @@ export default function OperationalCommandPanel({ fullPage }: { fullPage?: boole
       .then(({ data }) => { if (data) setWos(data as WO[]); });
   }, []);
 
-  const assetReadings = readings.filter(r => r.sensor_id.startsWith(activeAsset));
+  const activeReadings = timeRange === 'Real-Time' ? readings : (STATIC_HISTORICAL_READINGS[timeRange] || readings);
+  const activeAlerts = timeRange === 'Real-Time' ? proactiveAlerts : [];
+
+  const assetReadings = activeReadings.filter(r => r.sensor_id.startsWith(activeAsset));
   const sensorRow = assetReadings.filter(r => !r.sensor_id.includes('OIL') && !r.sensor_id.includes('GAS'));
   
-  const phi       = computePHI(readings);
-  const oilFlow   = readings.find(r => r.sensor_id === 'V-101-OIL_FLOW')?.value ?? 0;
-  const gasFlow   = readings.find(r => r.sensor_id === 'V-101-GAS_FLOW')?.value ?? 0;
+  const phi       = timeRange === 'Real-Time' ? computePHI(readings) : (timeRange === '24H' ? 98 : timeRange === '7D' ? 99 : 100);
+  const oilFlow   = activeReadings.find(r => r.sensor_id === 'V-101-OIL_FLOW')?.value ?? 0;
+  const gasFlow   = activeReadings.find(r => r.sensor_id === 'V-101-GAS_FLOW')?.value ?? 0;
   
   // Specific guards for V-101
-  const pressVal  = readings.find(r => r.sensor_id === 'V-101-PRESS')?.value ?? 0;
-  const envScore  = readings.some(r => r.status === 'TRIP') ? 82 : 98;
+  const pressVal  = activeReadings.find(r => r.sensor_id === 'V-101-PRESS')?.value ?? 0;
+  const envScore  = activeReadings.some(r => r.status === 'TRIP') ? 82 : (timeRange === 'Real-Time' ? 98 : 100);
   const phiColor  = phi >= 80 ? 'var(--good)' : phi >= 60 ? 'var(--alarm)' : 'var(--trip)';
   const envColor  = envScore >= 95 ? 'var(--good)' : envScore >= 85 ? 'var(--alarm)' : 'var(--trip)';
 
@@ -281,9 +309,9 @@ export default function OperationalCommandPanel({ fullPage }: { fullPage?: boole
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {proactiveAlerts.length > 0 && (
+          {activeAlerts.length > 0 && (
             <span style={{ fontSize: '0.65rem', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 6, padding: '3px 10px', color: 'var(--trip)', fontWeight: 700 }}>
-              {proactiveAlerts.length} ALERT{proactiveAlerts.length > 1 ? 'S' : ''}
+              {activeAlerts.length} ALERT{activeAlerts.length > 1 ? 'S' : ''}
             </span>
           )}
           <span className="track-badge track2">T2 · PROACTIVE</span>
@@ -293,10 +321,10 @@ export default function OperationalCommandPanel({ fullPage }: { fullPage?: boole
       <div className="panel-body">
 
         {/* ── Alerts ── */}
-        {proactiveAlerts.length > 0 && (
+        {activeAlerts.length > 0 && (
           <>
             <SH label="Active Alerts" />
-            {proactiveAlerts.map(a => (
+            {activeAlerts.map(a => (
               <div key={a.id} className={`alert ${a.severity === 'CRITICAL' ? 'critical' : 'warning'}`} style={{ marginBottom: 8 }}>
                 <div style={{ fontWeight: 700, fontSize: '0.85rem' }}>{a.message}</div>
                 <div className="alert-cite" style={{ marginTop: 5 }}>{a.cite}</div>

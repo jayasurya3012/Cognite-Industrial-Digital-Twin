@@ -154,6 +154,11 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
       .replace(/`(.*?)`/g, '<code style="background:rgba(120,180,255,0.1);padding:1px 6px;border-radius:4px;font-family:monospace;font-size:0.82em;color:var(--blue)">$1</code>')
       .replace(/\[WORK ORDER DRAFT\]/g, '<span style="color:var(--alarm);font-weight:800">[WORK ORDER DRAFT]</span>')
       .replace(/---\n?([\s\S]*?)\n?---/g, '<div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:6px;padding:12px 16px;margin:12px 0;font-family:monospace;font-size:0.8em;white-space:pre-wrap;color:var(--t2)">$1</div>')
+      .replace(/\[([A-Z]+-[a-zA-Z]+-\d+(?:#[^\]\s]+)?)\]/g, (match, p1) => {
+        const parts = p1.split('#');
+        const href = DOC_LINKS[parts[0]] ? `${DOC_LINKS[parts[0]]}${parts[1] ? '#' + parts[1] : ''}` : '#';
+        return `<a href="${href}" target="_blank" style="color:var(--blue);text-decoration:none;font-weight:700;background:rgba(120,180,255,0.1);padding:2px 6px;border-radius:4px" title="Open source document">📎 ${parts[0]}</a>`;
+      })
       .replace(/\n/g, '<br/>');
   };
 
@@ -177,11 +182,6 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
           {msg.citations.map(c => <CitationChip key={c} citation={c} />)}
         </div>
       )}
-      {!isUser && ASSET_TAGS.filter(a => msg.content.includes(a.tag)).map(foundTag => (
-        <a key={foundTag.tag} href={`/twin?focus=${foundTag.tag}`} style={{ display: 'inline-flex', alignItems: 'center', background: 'rgba(0, 212, 255, 0.08)', color: '#00d4ff', padding: '5px 10px', borderRadius: 12, fontSize: '0.65rem', textDecoration: 'none', border: '1px solid rgba(0, 212, 255, 0.3)', marginTop: 8, marginRight: 6, transition: 'all 0.2s', fontWeight: 600 }}>
-          <span style={{marginRight: 6}}>👁️</span> Inspect {foundTag.tag} in 3D Space
-        </a>
-      ))}
       {isUser && (
         <div style={{ fontSize: '0.6rem', color: 'var(--t3)', textAlign: 'right', marginTop: 3, paddingRight: 2 }}>
           {formatTime(msg.timestamp)}

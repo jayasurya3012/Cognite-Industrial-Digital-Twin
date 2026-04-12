@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
 import { getServiceClient } from '@/lib/supabase';
+import Supermemory from 'supermemory';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const memoryClient = new Supermemory({ apiKey: process.env.SUPERMEMORY_API_KEY });
 
 const SYSTEM_PROMPT = `You are the "Collaborative Brain" of the North Sea Platform Alpha (NPA) interface. You are an expert consultant with deep platform history, not just a passive text box.
 
@@ -98,6 +100,39 @@ async function getAnomalyContext(): Promise<string> {
   }
 }
 
+async function getLiveAssetContext(assetId: string): Promise<string> {
+  try {
+    const supabase = getServiceClient();
+    // Some assets are identified differently. Try to match the asset_id or sensor_id.
+    const { data } = await supabase
+      .from('latest_sensor_readings')
+      .select('sensor_id, value, unit, status')
+      .or(`asset_id.eq.${assetId},sensor_id.ilike.%${assetId.replace('AREA-HP-SEP:', '')}%`);
+
+    if (!data || data.length === 0) return `\n\n[LIVE DATA FOR ${assetId}]: None found. Model it based on PID-NPA-001.`;
+    const context = data.map((r: any) =>
+      `- ${r.sensor_id}: ${r.value} ${r.unit} (${r.status})`
+    ).join('\n');
+    return `\n\n[LIVE DATA FOR ${assetId}]\n${context}`;
+  } catch {
+    return '';
+  }
+}
+
+async function getChatMemoryContext(query: string): Promise<string> {
+  try {
+    const rawResults: any = await memoryClient.search.documents({ q: query, limit: 5 });
+    const results = Array.isArray(rawResults) ? rawResults : (rawResults.results || rawResults.data || rawResults.documents || []);
+
+    if (!results || results.length === 0) return '';
+    const mems = results.map((r: any) => `- ${r.content || r.text || JSON.stringify(r)}`).join('\n');
+    return `\n\n[LONG TERM CONVERSATION MEMORY (Relevant past discussions)]\n${mems}`;
+  } catch (err: any) {
+    console.error('Supermemory search error:', err.message);
+    return '';
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { messages, assetContext } = await req.json();
@@ -106,17 +141,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid messages format' }, { status: 400 });
     }
 
+    const lastUserMsg = messages[messages.length - 1]?.content || '';
+
     // Build Industrial Memory / Stateful Context
     let contextAddendum = '';
+    
+    // Attempt fetching related supermemory text based on latest prompt
+    contextAddendum += await getChatMemoryContext(lastUserMsg);
+
     if (assetContext) {
       contextAddendum += await getMaintenanceContext(assetContext);
+      contextAddendum += await getLiveAssetContext(assetContext);
     }
     contextAddendum += await getAnomalyContext();
 
     const systemContent = SYSTEM_PROMPT + contextAddendum;
 
     // Hardcoded Guardrail Block
-    const lastUserMsg = messages[messages.length - 1]?.content || '';
     const safetyKeywords = ['exceed 75', 'above 75', 'over 75', 'bypass mawp', 'higher than 75'];
     const isUnsafe = safetyKeywords.some(kw => lastUserMsg.toLowerCase().includes(kw));
 
@@ -146,6 +187,24 @@ export async function POST(req: NextRequest) {
     while ((match = citationPattern.exec(responseContent)) !== null) {
       citations.push(match[1].trim());
     }
+
+    // Save strictly the core messages to Supermemory asynchronously for future stateful tracking
+    try {
+      // Background promise so it doesn't block the HTTP response
+      Promise.all([
+        memoryClient.add({ content: `User asked: ${lastUserMsg}`, metadata: { role: 'user', timestamp: Date.now() } }),
+        memoryClient.add({ content: `NPA AI responded: ${responseContent}`, metadata: { role: 'assistant', timestamp: Date.now() } })
+      ]).catch(e => console.error('Supermemory logging error:', e.message));
+    } catch {}
+
+    // ALSO Log to Supabase chat_history just in case it exists, silently ignore failures
+    try {
+      const sb = getServiceClient();
+      Promise.all([
+        sb.from('chat_history').insert({ role: 'user', content: lastUserMsg }),
+        sb.from('chat_history').insert({ role: 'assistant', content: responseContent })
+      ]).catch(() => {}); // silent fail if table missing
+    } catch {}
 
     return NextResponse.json({ content: responseContent, citations: [...new Set(citations)] });
   } catch (error: any) {

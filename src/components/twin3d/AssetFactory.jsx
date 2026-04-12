@@ -60,7 +60,8 @@ export default function AssetFactory({ asset, isValve = false, healthMap, rawRea
         name={id}
         isSelected={isSelected}
         isHovered={isHovered}
-        state={asset.state}
+        state={asset.state || 'open'}
+        openPercent={asset.openPercent ?? 100}
         {...interactionProps}
       />
     );
