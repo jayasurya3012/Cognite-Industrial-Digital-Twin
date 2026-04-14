@@ -1,9 +1,12 @@
 # NPA Digital Twin: High-Fidelity Remote Monitoring Dashboard with AI
 
 # Team: Tokyo
+
 ## Team Members:
 JayasuryaSakthivel
+
 VishalLakshmiNarayanan
+
 Amaan Mohamed Kalemullah
 
 ## Overview
