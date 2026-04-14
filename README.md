@@ -34,6 +34,7 @@ Real-time simulation showing the system's response to an overpressure event (PSH
 ### Intelligent AI Operations Hub
 A context-aware industrial assistant with persistent memory, real-time telemetry cross-referencing, and automated work order generation.
 ![AI Hub Interface](public/gitimg/chatwindow.png)
+<img width="1919" height="914" alt="Screenshot 2026-04-13 103821" src="https://github.com/user-attachments/assets/e7b55adf-dde0-4bbc-ac29-492d89ea0e9d" />
 
 ## Core Technical Features
 
