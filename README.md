@@ -3,9 +3,9 @@
 # Team: Tokyo
 
 ## Team Members:
-JayasuryaSakthivel
+Jayasurya Sakthivel
 
-VishalLakshmiNarayanan
+Vishal Lakshmi Narayanan
 
 Amaan Mohamed Kalemullah
 
