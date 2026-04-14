@@ -1,4 +1,10 @@
-# NPA Digital Twin: High-Fidelity Remote Monitoring Dashboard
+# NPA Digital Twin: High-Fidelity Remote Monitoring Dashboard with AI
+
+# Team: Tokyo
+## Team Members:
+JayasuryaSakthivel
+VishalLakshmiNarayanan
+Amaan Mohamed Kalemullah
 
 ## Overview
 The NPA (North Plant Area) Digital Twin is an industrial-grade remote monitoring and diagnostic platform designed for high-stakes oil and gas operations. It integrates real-time telemetry, 3D spatial context, and collaborative AI to bridge the gap between complex sensor data and actionable maintenance intelligence.
